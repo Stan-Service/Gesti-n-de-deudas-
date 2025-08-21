@@ -1,22 +1,39 @@
-body {
-  font-family: Arial, sans-serif;
+:root{ --radius: 1rem; }
+
+body{
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial;
 }
 
-.card {
-  border-radius: 1rem;
+.card{ border-radius: var(--radius); }
+
+.btn{ border-radius: .7rem; }
+
+.cliente-card{
+  transition: transform .15s ease, box-shadow .15s ease;
+}
+.cliente-card:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 .75rem 1.25rem rgba(0,0,0,.08) !important;
 }
 
-.btn {
-  border-radius: 0.75rem;
+.badge-mono{ font-variant-numeric: tabular-nums; }
+
+.deuda-grande{
+  font-size: clamp(1.1rem, 2.4vw, 1.5rem);
+  font-weight: 800;
 }
 
-.cliente-card {
-  transition: transform 0.2s;
-}
-.cliente-card:hover {
-  transform: scale(1.02);
+.card-section-title{
+  font-size: .9rem;
+  letter-spacing: .2px;
+  color: #6c757d;
+  text-transform: uppercase;
+  margin-bottom: .35rem;
 }
 
-.config-individual {
-  display: none;
+.op-note{ font-size: .85rem; color: #6c757d; }
+
+.empty{
+  border: 2px dashed #dee2e6; border-radius: var(--radius);
+  padding: 2rem; text-align: center; color: #6c757d;
 }
