@@ -3,43 +3,61 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gestor de Deudas de Clientes</title>
+    <title>Gestor de Deudas</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
     <header>
-        <h1>Gestor de Deudas</h1>
+        <h1>Gestor de Deudas de Clientes 💰</h1>
     </header>
 
     <main>
-        <section class="add-client">
+        <section class="form-section">
             <h2>Añadir Nuevo Cliente</h2>
             <form id="client-form">
-                <label for="client-name">Nombre del Cliente:</label>
-                <input type="text" id="client-name" required>
-
-                <label for="client-debt">Deuda Inicial:</label>
-                <input type="number" id="client-debt" required>
-
-                <label for="debt-currency">Moneda:</label>
-                <select id="debt-currency">
-                    <option value="USD">USD</option>
-                    <option value="CUP">CUP</option>
+                <div class="form-group">
+                    <label for="client-name">Nombre del Cliente:</label>
+                    <input type="text" id="client-name" required>
+                </div>
+                <div class="form-group">
+                    <label for="client-debt">Deuda Inicial:</label>
+                    <input type="number" id="client-debt" required min="0">
+                </div>
+                <div class="form-group">
+                    <label for="debt-currency">Moneda:</label>
+                    <select id="debt-currency">
+                        <option value="USD">USD</option>
+                        <option value="CUP">CUP</option>
                     </select>
-
-                <button type="submit">Guardar Cliente</button>
+                </div>
+                <button type="submit" class="btn">Guardar Cliente</button>
             </form>
         </section>
 
-        <section class="debt-list">
+        <hr>
+
+        <section class="debt-section">
             <h2>Listado de Deudas</h2>
+            <div class="settings">
+                <h3>Tasas de Cambio Generales</h3>
+                <div class="form-group">
+                    <label for="usd-cup-rate">1 USD a CUP:</label>
+                    <input type="number" id="usd-cup-rate" min="0.01" value="250">
+                </div>
+                <div class="form-group">
+                    <label for="cup-transfer-rate">CUP Transferencia a CUP Efectivo:</label>
+                    <input type="number" id="cup-transfer-rate" min="0.01" value="1.05">
+                </div>
+                <button id="save-general-rates" class="btn">Guardar Tasas Generales</button>
+            </div>
+
             <table id="debt-table">
                 <thead>
                     <tr>
                         <th>Cliente</th>
                         <th>Deuda</th>
-                        <th>Operaciones</th>
+                        <th>Moneda</th>
                         <th>Acciones</th>
                     </tr>
                 </thead>
@@ -47,21 +65,47 @@
                     </tbody>
             </table>
         </section>
-
-        <section class="settings">
-            <h2>Configuración</h2>
-            <div class="exchange-rates">
-                <h3>Tasas de Cambio Generales</h3>
-                <label for="usd-cup-rate">1 USD a CUP (efectivo):</label>
-                <input type="number" id="usd-cup-rate" value="250">
-
-                <label for="cup-transfer-rate">CUP Transferencia a CUP Efectivo:</label>
-                <input type="number" id="cup-transfer-rate" value="1.05">
-                <button id="save-general-rates">Guardar Tasas Generales</button>
-            </div>
-        </section>
     </main>
 
+    <div id="modal" class="modal">
+        <div class="modal-content">
+            <span class="close-btn">&times;</span>
+            <h3 id="modal-title">Operaciones para <span></span></h3>
+            <form id="operation-form">
+                <div class="form-group">
+                    <label for="operation-type">Tipo de Operación:</label>
+                    <select id="operation-type">
+                        <option value="aumentar">Aumentar Deuda</option>
+                        <option value="disminuir">Disminuir Deuda</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="operation-amount">Monto:</label>
+                    <input type="number" id="operation-amount" required min="0.01">
+                </div>
+                <div class="form-group">
+                    <label for="operation-currency">Moneda de la Operación:</label>
+                    <select id="operation-currency">
+                        <option value="USD">USD</option>
+                        <option value="CUP">CUP</option>
+                    </select>
+                </div>
+                <div class="form-group transfer-group">
+                    <label for="operation-cup-type">Tipo de CUP:</label>
+                    <select id="operation-cup-type">
+                        <option value="efectivo">Efectivo</option>
+                        <option value="transferencia">Transferencia</option>
+                    </select>
+                </div>
+                <button type="submit" class="btn">Aplicar</button>
+            </form>
+            <hr>
+            <h4>Historial de Operaciones</h4>
+            <ul id="operation-history">
+                </ul>
+        </div>
+    </div>
+    
     <script src="script.js"></script>
 </body>
 </html>
