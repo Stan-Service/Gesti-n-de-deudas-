@@ -1,39 +1,48 @@
-:root{ --radius: 1rem; }
+:root{
+  --radius: 1rem;
+  --primary-start: #2065d3;
+  --primary-end: #1a9ad6;
+}
 
 body{
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial;
+  font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+}
+
+.bg-gradient-primary{
+  background: linear-gradient(90deg, var(--primary-start), var(--primary-end));
 }
 
 .card{ border-radius: var(--radius); }
 
-.btn{ border-radius: .7rem; }
-
 .cliente-card{
-  transition: transform .15s ease, box-shadow .15s ease;
+  transition: transform .12s ease, box-shadow .12s ease;
 }
 .cliente-card:hover{
-  transform: translateY(-2px);
-  box-shadow: 0 .75rem 1.25rem rgba(0,0,0,.08) !important;
+  transform: translateY(-4px);
+  box-shadow: 0 1rem 1.75rem rgba(22, 28, 37, .07);
 }
 
-.badge-mono{ font-variant-numeric: tabular-nums; }
-
 .deuda-grande{
-  font-size: clamp(1.1rem, 2.4vw, 1.5rem);
-  font-weight: 800;
+  font-size: 1.4rem;
+  font-weight: 700;
 }
 
 .card-section-title{
-  font-size: .9rem;
-  letter-spacing: .2px;
+  font-size: .82rem;
   color: #6c757d;
   text-transform: uppercase;
-  margin-bottom: .35rem;
+  margin-bottom: .2rem;
 }
 
-.op-note{ font-size: .85rem; color: #6c757d; }
-
 .empty{
-  border: 2px dashed #dee2e6; border-radius: var(--radius);
-  padding: 2rem; text-align: center; color: #6c757d;
+  border: 2px dashed #e9ecef;
+  border-radius: var(--radius);
+  padding: 2rem;
+  text-align: center;
+  color: #6c757d;
+}
+
+.small-note{
+  font-size: .85rem;
+  color: #6c757d;
 }
