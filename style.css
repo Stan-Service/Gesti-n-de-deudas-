@@ -1,4 +1,52 @@
-/* Extra opcional si quieres más aire */
-input, select, button {
-  outline: none;
+/* Estilos mínimos extra: separación de responsabilidades y pequeños refinamientos */
+
+:root {
+  --ring: 0 0 0 3px rgba(59,130,246,.35);
 }
+
+* { box-sizing: border-box; }
+body { font-family: Inter, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji"; }
+
+/* Componentes utilitarios compatibles con Tailwind */
+.tw-input {
+  @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none shadow-sm focus:ring-4;
+  box-shadow: 0 0 0 0 transparent;
+}
+.tw-input:focus { box-shadow: var(--ring); }
+
+.tw-select {
+  @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm outline-none shadow-sm focus:ring-4;
+}
+.tw-select:focus { box-shadow: var(--ring); }
+
+.tw-btn-primary {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-blue-700 active:bg-blue-800 transition;
+}
+
+.tw-btn-outline {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition;
+}
+
+.tw-btn-danger {
+  @apply inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 active:bg-red-800 transition;
+}
+
+.tw-chip {
+  @apply inline-flex items-center gap-1 rounded-full bg-slate-100 text-slate-700 px-2 py-0.5 text-xs font-medium border border-slate-200;
+}
+
+.tw-card {
+  @apply relative bg-white rounded-2xl border border-slate-200 shadow-sm p-4;
+}
+
+.tw-icon-btn {
+  @apply inline-flex items-center justify-center rounded-xl border border-slate-300 bg-white px-2 py-1 text-sm hover:bg-slate-50 transition;
+}
+
+/* Modal helpers */
+#confirmModal.hidden,
+#clientRatesModal.hidden { display: none; }
+#confirmModal,
+#clientRatesModal { display: none; }
+#confirmModal.flex,
+#clientRatesModal.flex { display: flex; }
