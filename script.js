@@ -1,112 +1,61 @@
-// --- Utilidades ---
-function getStorage(key, def) {
-  return JSON.parse(localStorage.getItem(key)) || def;
-}
-function setStorage(key, val) {
-  localStorage.setItem(key, JSON.stringify(val));
-}
+/* ===========================
+   Gestor de Deudas (LocalStorage)
+   =========================== */
 
-// --- Variables ---
-let tasas = getStorage("tasasGlobales", {});
-let clientes = getStorage("clientes", []);
+/* ----- Constantes & utilidades ----- */
+const CURRENCIES = {
+  USD: { label: "USD", symbol: "$" },
+  CUP_EFECTIVO: { label: "CUP efectivo", symbol: "CUP$" },
+  CUP_TRANSFER: { label: "CUP transferencia", symbol: "CUP$" },
+};
 
-// --- Referencias DOM ---
-const moneda1 = document.getElementById("moneda1");
-const moneda2 = document.getElementById("moneda2");
-const valorTasa = document.getElementById("valorTasa");
-const addTasa = document.getElementById("addTasa");
-const guardarTasas = document.getElementById("guardarTasas");
-const listaTasas = document.getElementById("listaTasas");
+const LS_KEYS = {
+  clients: "gd_clients",
+  globalRates: "gd_global_rates", // { current: { "A->B": number }, history: [{pair, rate, ts}] }
+  ui: "gd_ui",                    // { controlsVisible: boolean }
+  viewCurrency: "gd_view_currency",
+};
 
-const nombreCliente = document.getElementById("nombreCliente");
-const deudaInicial = document.getElementById("deudaInicial");
-const monedaDeuda = document.getElementById("monedaDeuda");
-const addCliente = document.getElementById("addCliente");
-const listaClientes = document.getElementById("listaClientes");
-const buscarCliente = document.getElementById("buscarCliente");
-
-// --- Funciones de tasas ---
-function renderTasas() {
-  listaTasas.innerHTML = "";
-  const keys = Object.keys(tasas).slice(-3); // últimas 3
-  keys.forEach(key => {
-    const [m1, m2] = key.split("->");
-    const li = document.createElement("li");
-    li.textContent = `1 ${m1} = ${tasas[key]} ${m2}`;
-    listaTasas.appendChild(li);
-  });
+function fmtAmount(num) {
+  if (!isFinite(num)) return "—";
+  const abs = Math.abs(num);
+  const decimals = abs < 1 ? 4 : abs < 100 ? 2 : 2;
+  return num.toLocaleString("es-ES", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 }
 
-addTasa.addEventListener("click", () => {
-  if (moneda1.value === moneda2.value) {
-    alert("Las monedas no pueden ser iguales.");
-    return;
-  }
-  if (!valorTasa.value || valorTasa.value <= 0) {
-    alert("Introduce un valor válido para la tasa.");
-    return;
-  }
-  const key = `${moneda1.value}->${moneda2.value}`;
-  tasas[key] = parseFloat(valorTasa.value);
-  renderTasas();
-});
-
-guardarTasas.addEventListener("click", () => {
-  setStorage("tasasGlobales", tasas);
-  alert("✅ Tasas globales guardadas");
-});
-
-// --- Funciones de clientes ---
-function renderClientes(filtro = "") {
-  listaClientes.innerHTML = "";
-  clientes
-    .filter(c => c.nombre.toLowerCase().includes(filtro.toLowerCase()))
-    .forEach((cliente, idx) => {
-      const div = document.createElement("div");
-      div.className = "border rounded p-3 flex justify-between items-center";
-      div.innerHTML = `
-        <div>
-          <p class="font-semibold">${cliente.nombre}</p>
-          <p class="text-sm text-gray-600">${cliente.deuda} ${cliente.moneda}</p>
-        </div>
-        <button class="text-red-500 font-bold text-lg">❌</button>
-      `;
-      // evento eliminar
-      div.querySelector("button").addEventListener("click", () => {
-        if (confirm(`¿Seguro que deseas eliminar a ${cliente.nombre}?`)) {
-          clientes.splice(idx, 1);
-          setStorage("clientes", clientes);
-          renderClientes(buscarCliente.value);
-        }
-      });
-      listaClientes.appendChild(div);
-    });
+function pairKey(from, to) {
+  return `${from}->${to}`;
 }
 
-addCliente.addEventListener("click", () => {
-  if (!nombreCliente.value.trim()) {
-    alert("Introduce un nombre de cliente.");
-    return;
-  }
-  if (!deudaInicial.value || deudaInicial.value < 0) {
-    alert("Introduce una deuda válida.");
-    return;
-  }
-  clientes.push({
-    nombre: nombreCliente.value.trim(),
-    deuda: parseFloat(deudaInicial.value),
-    moneda: monedaDeuda.value
-  });
-  setStorage("clientes", clientes);
-  renderClientes();
-  nombreCliente.value = "";
-  deudaInicial.value = "";
-});
+/** Convierte monto entre monedas usando:
+ * 1) tasas individuales del cliente (si existen para ese par),
+ * 2) tasas globales (directa),
+ * 3) tasa inversa si existe (1/r),
+ * En faltantes: intenta retorno 1 si from==to, si no, NaN.
+ */
+function convertAmount(amount, from, to, clientRateMap, globalRates) {
+  if (from === to) return amount;
 
-buscarCliente.addEventListener("input", (e) => {
-  renderClientes(e.target.value);
-});
+  const tryMaps = [];
+  if (clientRateMap) tryMaps.push(clientRateMap);
+  if (globalRates?.current) tryMaps.push(globalRates.current);
 
-// --- Inicialización ---
-renderTasas();
-renderClientes();
+  for (const rates of tryMaps) {
+    const direct = rates[pairKey(from, to)];
+    if (typeof direct === "number" && direct > 0) return amount * direct;
+
+    const inverse = rates[pairKey(to, from)];
+    if (typeof inverse === "number" && inverse > 0) return amount / inverse;
+  }
+  return NaN;
+}
+
+/* ----- Estado persistente ----- */
+function loadJSON(key, fallback) {
+  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
+}
+function saveJSON(key, value) {
+  localStorage.setItem(key, JSON.stringify(value));
+}
+
+let clients = loadJSON(LS_KEYS.clients,
