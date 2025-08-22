@@ -1,61 +1,230 @@
-/* ===========================
-   Gestor de Deudas (LocalStorage)
-   =========================== */
+// Variables del DOM
+const toggleControlsBtn = document.getElementById('toggleControlsBtn');
+const controlsDiv = document.getElementById('controls');
+const addClientBtn = document.getElementById('addClientBtn');
+const clientNameInput = document.getElementById('clientNameInput');
+const initialDebtInput = document.getElementById('initialDebtInput');
+const initialCurrencySelect = document.getElementById('initialCurrencySelect');
+const clientsList = document.getElementById('clientsList');
+const confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+const saveRateBtn = document.getElementById('saveRateBtn');
+const fromCurrencySelect = document.getElementById('fromCurrencySelect');
+const toCurrencySelect = document.getElementById('toCurrencySelect');
+const rateInput = document.getElementById('rateInput');
+const ratesDisplay = document.getElementById('ratesDisplay');
+const globalCurrencySelect = document.getElementById('globalCurrencySelect');
 
-/* ----- Constantes & utilidades ----- */
-const CURRENCIES = {
-  USD: { label: "USD", symbol: "$" },
-  CUP_EFECTIVO: { label: "CUP efectivo", symbol: "CUP$" },
-  CUP_TRANSFER: { label: "CUP transferencia", symbol: "CUP$" },
-};
+// Variables para los datos
+let clients = [];
+let rates = {}; // { 'USD_CUP-Efectivo': 400, ... }
+let clientToDeleteId = null;
 
-const LS_KEYS = {
-  clients: "gd_clients",
-  globalRates: "gd_global_rates", // { current: { "A->B": number }, history: [{pair, rate, ts}] }
-  ui: "gd_ui",                    // { controlsVisible: boolean }
-  viewCurrency: "gd_view_currency",
-};
+// Funciones principales
+document.addEventListener('DOMContentLoaded', () => {
+    loadData();
+    renderClients();
+    renderRates();
+});
 
-function fmtAmount(num) {
-  if (!isFinite(num)) return "—";
-  const abs = Math.abs(num);
-  const decimals = abs < 1 ? 4 : abs < 100 ? 2 : 2;
-  return num.toLocaleString("es-ES", { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+// Cargar datos desde LocalStorage
+function loadData() {
+    const storedClients = localStorage.getItem('clients');
+    if (storedClients) {
+        clients = JSON.parse(storedClients);
+    }
+    const storedRates = localStorage.getItem('rates');
+    if (storedRates) {
+        rates = JSON.parse(storedRates);
+    }
 }
 
-function pairKey(from, to) {
-  return `${from}->${to}`;
+// Guardar datos en LocalStorage
+function saveData() {
+    localStorage.setItem('clients', JSON.stringify(clients));
+    localStorage.setItem('rates', JSON.stringify(rates));
 }
 
-/** Convierte monto entre monedas usando:
- * 1) tasas individuales del cliente (si existen para ese par),
- * 2) tasas globales (directa),
- * 3) tasa inversa si existe (1/r),
- * En faltantes: intenta retorno 1 si from==to, si no, NaN.
- */
-function convertAmount(amount, from, to, clientRateMap, globalRates) {
-  if (from === to) return amount;
+// Renderizar la lista de clientes
+function renderClients() {
+    clientsList.innerHTML = '';
+    const globalCurrency = globalCurrencySelect.value;
+    
+    clients.forEach(client => {
+        const clientRate = client.rates[`${client.currency}_${globalCurrency}`] || rates[`${client.currency}_${globalCurrency}`];
+        const convertedDebt = clientRate ? (client.debt * clientRate).toFixed(2) : 'N/A';
+        const debtText = clientRate ? `${convertedDebt} ${globalCurrency}` : `${client.debt} ${client.currency}`;
 
-  const tryMaps = [];
-  if (clientRateMap) tryMaps.push(clientRateMap);
-  if (globalRates?.current) tryMaps.push(globalRates.current);
-
-  for (const rates of tryMaps) {
-    const direct = rates[pairKey(from, to)];
-    if (typeof direct === "number" && direct > 0) return amount * direct;
-
-    const inverse = rates[pairKey(to, from)];
-    if (typeof inverse === "number" && inverse > 0) return amount / inverse;
-  }
-  return NaN;
+        const li = document.createElement('li');
+        li.className = 'list-group-item';
+        li.dataset.id = client.id;
+        li.innerHTML = `
+            <div class="debt-info">
+                <strong>${client.name}</strong> - Deuda: ${debtText}
+            </div>
+            <div class="debt-actions">
+                <div class="dropdown me-2">
+                    <button class="btn btn-sm btn-info dropdown-toggle" type="button" id="dropdownMenuButton${client.id}" data-bs-toggle="dropdown" aria-expanded="false">
+                        Operación
+                    </button>
+                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton${client.id}">
+                        <li>
+                            <div class="d-flex p-2">
+                                <input type="number" class="form-control form-control-sm me-2 operation-input" placeholder="Cantidad">
+                                <button class="btn btn-sm btn-success add-debt-btn me-1">Sumar</button>
+                                <button class="btn btn-sm btn-warning subtract-debt-btn">Restar</button>
+                            </div>
+                        </li>
+                    </ul>
+                </div>
+                <div class="dropdown me-2">
+                    <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="configDropdown${client.id}" data-bs-toggle="dropdown" aria-expanded="false">
+                        Configuración
+                    </button>
+                    <ul class="dropdown-menu p-2" aria-labelledby="configDropdown${client.id}">
+                        <div class="row g-2">
+                            <div class="col-md-6">
+                                <select class="form-select form-select-sm from-currency-select">
+                                    <option value="USD">USD</option>
+                                    <option value="CUP-Efectivo">CUP (Efectivo)</option>
+                                    <option value="CUP-Transferencia">CUP (Transferencia)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-6">
+                                <select class="form-select form-select-sm to-currency-select">
+                                    <option value="USD">USD</option>
+                                    <option value="CUP-Efectivo">CUP (Efectivo)</option>
+                                    <option value="CUP-Transferencia">CUP (Transferencia)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-12">
+                                <div class="input-group input-group-sm">
+                                    <input type="number" class="form-control rate-input" step="0.01" value="1">
+                                    <button class="btn btn-primary save-rate-client-btn">Guardar</button>
+                                </div>
+                            </div>
+                        </div>
+                    </ul>
+                </div>
+                <button class="btn btn-sm btn-danger delete-btn">X</button>
+            </div>
+        `;
+        clientsList.appendChild(li);
+    });
 }
 
-/* ----- Estado persistente ----- */
-function loadJSON(key, fallback) {
-  try { return JSON.parse(localStorage.getItem(key)) ?? fallback; } catch { return fallback; }
-}
-function saveJSON(key, value) {
-  localStorage.setItem(key, JSON.stringify(value));
+// Renderizar las tasas de cambio guardadas
+function renderRates() {
+    ratesDisplay.innerHTML = '';
+    const rateKeys = Object.keys(rates).reverse().slice(0, 3);
+    rateKeys.forEach(key => {
+        const [from, to] = key.split('_');
+        const rate = rates[key];
+        const p = document.createElement('p');
+        p.textContent = `1 ${from} = ${rate} ${to}`;
+        ratesDisplay.appendChild(p);
+    });
 }
 
-let clients = loadJSON(LS_KEYS.clients,
+// Agregar un nuevo cliente
+addClientBtn.addEventListener('click', () => {
+    const name = clientNameInput.value.trim();
+    const debt = parseFloat(initialDebtInput.value);
+    const currency = initialCurrencySelect.value;
+
+    if (name && !isNaN(debt)) {
+        const newClient = {
+            id: Date.now(),
+            name,
+            debt,
+            currency,
+            rates: {} // Para las tasas de cambio individuales
+        };
+        clients.push(newClient);
+        saveData();
+        renderClients();
+        clientNameInput.value = '';
+        initialDebtInput.value = '0';
+    } else {
+        alert('Por favor, ingrese un nombre y una deuda válida.');
+    }
+});
+
+// Event listener para los botones de la lista de clientes (delegación)
+clientsList.addEventListener('click', (e) => {
+    const li = e.target.closest('.list-group-item');
+    if (!li) return;
+
+    const clientId = parseInt(li.dataset.id);
+    const client = clients.find(c => c.id === clientId);
+
+    if (e.target.classList.contains('delete-btn')) {
+        clientToDeleteId = clientId;
+        confirmDeleteModal.show();
+    } else if (e.target.classList.contains('add-debt-btn')) {
+        const input = li.querySelector('.operation-input');
+        const amount = parseFloat(input.value);
+        if (!isNaN(amount)) {
+            client.debt += amount;
+            saveData();
+            renderClients();
+        }
+    } else if (e.target.classList.contains('subtract-debt-btn')) {
+        const input = li.querySelector('.operation-input');
+        const amount = parseFloat(input.value);
+        if (!isNaN(amount)) {
+            client.debt -= amount;
+            saveData();
+            renderClients();
+        }
+    } else if (e.target.classList.contains('save-rate-client-btn')) {
+        const parent = e.target.closest('.dropdown-menu');
+        const from = parent.querySelector('.from-currency-select').value;
+        const to = parent.querySelector('.to-currency-select').value;
+        const rate = parseFloat(parent.querySelector('.rate-input').value);
+        
+        if (!isNaN(rate) && rate > 0) {
+            client.rates[`${from}_${to}`] = rate;
+            saveData();
+            renderClients();
+        } else {
+            alert('Por favor, ingrese una tasa de cambio válida.');
+        }
+    }
+});
+
+// Confirmar la eliminación del cliente
+confirmDeleteBtn.addEventListener('click', () => {
+    if (clientToDeleteId !== null) {
+        clients = clients.filter(client => client.id !== clientToDeleteId);
+        saveData();
+        renderClients();
+        clientToDeleteId = null;
+        confirmDeleteModal.hide();
+    }
+});
+
+// Guardar una nueva tasa de cambio global
+saveRateBtn.addEventListener('click', () => {
+    const from = fromCurrencySelect.value;
+    const to = toCurrencySelect.value;
+    const rate = parseFloat(rateInput.value);
+
+    if (!isNaN(rate) && rate > 0) {
+        rates[`${from}_${to}`] = rate;
+        saveData();
+        renderRates();
+        renderClients(); // Actualizar las deudas mostradas
+    } else {
+        alert('Por favor, ingrese una tasa de cambio válida.');
+    }
+});
+
+// Event listener para el cambio de moneda global
+globalCurrencySelect.addEventListener('change', renderClients);
+
+// Botón para mostrar/ocultar los controles
+toggleControlsBtn.addEventListener('click', () => {
+    controlsDiv.classList.toggle('collapse');
+    controlsDiv.classList.toggle('show');
+});
