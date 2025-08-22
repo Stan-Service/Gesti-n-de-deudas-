@@ -1,64 +1,158 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Gestor de Deudas</title>
-  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+
+  <!-- TailwindCSS (CDN) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Interfaz: fuente limpia -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Estilos propios -->
+  <link rel="stylesheet" href="style.css"/>
+
 </head>
-<body class="bg-gray-100 min-h-screen p-4">
-  <div class="max-w-3xl mx-auto bg-white rounded-xl shadow-lg p-6">
-    <h1 class="text-2xl font-bold text-center text-blue-600 mb-6">📒 Gestor de Deudas</h1>
-
-    <!-- Configuración General de Tasas -->
-    <div class="mb-6">
-      <h2 class="text-lg font-semibold flex items-center mb-3">⚙️ Configuración General de Tasas</h2>
-      <div class="grid grid-cols-3 gap-2 mb-3">
-        <select id="moneda1" class="border rounded p-2">
+<body class="bg-slate-50 text-slate-800">
+  <header class="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-slate-200">
+    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between">
+      <h1 class="text-2xl font-extrabold tracking-tight">Gestor de Deudas</h1>
+      <div class="flex items-center gap-2">
+        <!-- Selector de moneda global -->
+        <label for="globalCurrency" class="text-sm font-medium">Ver deudas en:</label>
+        <select id="globalCurrency" class="tw-select">
           <option value="USD">USD</option>
-          <option value="CUP">CUP</option>
-          <option value="TRF">TRF</option>
+          <option value="CUP_EFECTIVO">CUP efectivo</option>
+          <option value="CUP_TRANSFER">CUP transferencia</option>
         </select>
-        <select id="moneda2" class="border rounded p-2">
+
+        <!-- Toggle Panel Controles -->
+        <button id="toggleControlsBtn" class="tw-btn-outline">
+          Mostrar/Ocultar Controles
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Panel de controles (agregar cliente + tasas) -->
+  <section id="controlsPanel" class="max-w-6xl mx-auto px-4 pt-6 pb-4">
+    <!-- Agregar cliente -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4 mb-6">
+      <h2 class="text-lg font-semibold mb-3">Agregar cliente</h2>
+      <form id="addClientForm" class="grid grid-cols-1 md:grid-cols-5 gap-3">
+        <input id="clientName" type="text" class="tw-input md:col-span-2" placeholder="Nombre del cliente" required/>
+        <input id="clientInitialDebt" type="number" step="0.01" class="tw-input" placeholder="Deuda inicial" required/>
+        <select id="clientCurrency" class="tw-select">
           <option value="USD">USD</option>
-          <option value="CUP">CUP</option>
-          <option value="TRF">TRF</option>
+          <option value="CUP_EFECTIVO">CUP efectivo</option>
+          <option value="CUP_TRANSFER">CUP transferencia</option>
         </select>
-        <input id="valorTasa" type="number" class="border rounded p-2" placeholder="Tasa">
+        <button class="tw-btn-primary">Añadir</button>
+      </form>
+    </div>
+
+    <!-- Configuración general de tasas -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-4">
+      <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+        <h2 class="text-lg font-semibold">Configuración general de tasas</h2>
+        <p class="text-xs text-slate-500">La última tasa guardada para un par queda como la tasa “default” usada en conversiones.</p>
       </div>
-      <div class="flex gap-2">
-        <button id="addTasa" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">+ Añadir</button>
-        <button id="guardarTasas" class="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded">Guardar Tasas Globales</button>
+
+      <form id="saveRateForm" class="grid grid-cols-1 md:grid-cols-6 gap-3 mt-3">
+        <!-- Selects visibles y campo numérico sin ser tapado -->
+        <div class="md:col-span-2 grid grid-cols-2 gap-2">
+          <select id="rateFrom" class="tw-select">
+            <option value="USD">USD</option>
+            <option value="CUP_EFECTIVO">CUP efectivo</option>
+            <option value="CUP_TRANSFER">CUP transferencia</option>
+          </select>
+          <select id="rateTo" class="tw-select">
+            <option value="USD">USD</option>
+            <option value="CUP_EFECTIVO">CUP efectivo</option>
+            <option value="CUP_TRANSFER">CUP transferencia</option>
+          </select>
+        </div>
+
+        <div class="md:col-span-2">
+          <div class="flex items-center gap-2">
+            <label for="rateValue" class="text-sm font-medium whitespace-nowrap">Tasa (1 <span id="fromLabel">USD</span> = ? <span id="toLabel">USD</span>)</label>
+            <input id="rateValue" type="number" step="0.000001" min="0" class="tw-input flex-1" placeholder="Ej: 400" required/>
+          </div>
+        </div>
+
+        <button class="tw-btn-primary md:col-span-2">Guardar tasa</button>
+      </form>
+
+      <div class="mt-4">
+        <h3 class="text-sm font-semibold mb-2">Últimas tasas guardadas (máx. 3):</h3>
+        <ul id="ratesHistory" class="space-y-1 text-sm"></ul>
       </div>
-      <!-- Lista de tasas -->
-      <ul id="listaTasas" class="mt-4 space-y-1 text-sm text-gray-700"></ul>
+    </div>
+  </section>
+
+  <!-- Lista de clientes -->
+  <main class="max-w-6xl mx-auto px-4 pb-16">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-xl font-bold">Clientes</h2>
+      <small class="text-slate-500">Los datos se guardan en tu navegador (LocalStorage).</small>
     </div>
 
-    <!-- Agregar Cliente -->
-    <div class="mb-6">
-      <h2 class="text-lg font-semibold flex items-center mb-3">👤 Agregar Cliente</h2>
-      <input id="nombreCliente" type="text" placeholder="Nombre del Cliente" class="border rounded w-full p-2 mb-2">
-      <input id="deudaInicial" type="number" placeholder="Deuda Inicial" class="border rounded w-full p-2 mb-2">
-      <select id="monedaDeuda" class="border rounded w-full p-2 mb-2">
-        <option value="USD">USD</option>
-        <option value="CUP">CUP</option>
-        <option value="TRF">TRF</option>
-      </select>
-      <button id="addCliente" class="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded w-full">Agregar</button>
+    <div id="clientsList" class="grid gap-4 md:grid-cols-2 lg:grid-cols-3"></div>
+  </main>
+
+  <!-- Modal: Confirmar eliminación cliente -->
+  <div id="confirmModal" class="fixed inset-0 hidden items-center justify-center bg-black/40 p-4">
+    <div class="bg-white rounded-2xl shadow-lg p-6 w-full max-w-md">
+      <h3 class="text-lg font-semibold mb-2">Confirmar eliminación</h3>
+      <p class="text-sm text-slate-600 mb-6">¿Está seguro de que desea eliminar este cliente?</p>
+      <div class="flex justify-end gap-2">
+        <button id="cancelDeleteBtn" class="tw-btn-outline">Cancelar</button>
+        <button id="confirmDeleteBtn" class="tw-btn-danger">Aceptar</button>
+      </div>
     </div>
-
-    <!-- Buscar Cliente -->
-    <div class="mb-4">
-      <input id="buscarCliente" type="text" placeholder="Buscar cliente..." class="border rounded w-full p-2">
-    </div>
-
-    <!-- Lista de Clientes -->
-    <h2 class="text-lg font-semibold flex items-center mb-3">📋 Lista de Clientes</h2>
-    <div id="listaClientes" class="space-y-2"></div>
-
-    <p class="text-xs text-gray-500 mt-6">Guardado local con <code>localStorage</code></p>
   </div>
 
+  <!-- Modal: Tasas individuales por cliente -->
+  <div id="clientRatesModal" class="fixed inset-0 hidden items-center justify-center bg-black/40 p-4">
+    <div class="bg-white rounded-2xl shadow-lg p-6 w-full max-w-lg">
+      <div class="flex items-start justify-between mb-3">
+        <h3 class="text-lg font-semibold">Tasas individuales</h3>
+        <button id="closeClientRatesModal" class="tw-icon-btn" title="Cerrar">✕</button>
+      </div>
+      <p class="text-xs text-slate-500 mb-3">Estas tasas aplican solo a este cliente. No se alteran si cambias las tasas globales.</p>
+      <form id="saveClientRateForm" class="grid grid-cols-1 md:grid-cols-6 gap-3">
+        <div class="md:col-span-2 grid grid-cols-2 gap-2">
+          <select id="clientRateFrom" class="tw-select">
+            <option value="USD">USD</option>
+            <option value="CUP_EFECTIVO">CUP efectivo</option>
+            <option value="CUP_TRANSFER">CUP transferencia</option>
+          </select>
+          <select id="clientRateTo" class="tw-select">
+            <option value="USD">USD</option>
+            <option value="CUP_EFECTIVO">CUP efectivo</option>
+            <option value="CUP_TRANSFER">CUP transferencia</option>
+          </select>
+        </div>
+        <div class="md:col-span-2">
+          <div class="flex items-center gap-2">
+            <label for="clientRateValue" class="text-sm font-medium whitespace-nowrap">Tasa</label>
+            <input id="clientRateValue" type="number" step="0.000001" min="0" class="tw-input flex-1" placeholder="Ej: 400" required/>
+          </div>
+        </div>
+        <button class="tw-btn-primary md:col-span-2">Guardar</button>
+      </form>
+
+      <div class="mt-4">
+        <h4 class="text-sm font-semibold mb-2">Tasas individuales guardadas:</h4>
+        <ul id="clientRatesList" class="space-y-1 text-sm"></ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Script principal -->
   <script src="script.js"></script>
 </body>
 </html>
