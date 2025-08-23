@@ -4,31 +4,34 @@ import { DebtManager } from './debtManager.js';
 let debtManager;
 
 function bindEvents() {
-  document.getElementById("addClientBtn").addEventListener("click", () => debtManager.openModal("addClientModal"));
-  document.getElementById("configRatesBtn").addEventListener("click", () => debtManager.openModal("configRatesModal"));
-  document.getElementById("showPaidClientsBtn").addEventListener("click", () => debtManager.togglePaidClients());
-  document.getElementById("addClientForm").addEventListener("submit", (e) => debtManager.handleAddClient(e));
-  document.getElementById("configRatesForm").addEventListener("submit", (e) => debtManager.handleConfigRates(e));
-  document.getElementById("globalCurrency").addEventListener("change", (e) => debtManager.changeGlobalCurrency(e.target.value));
-  document.getElementById("fromCurrency").addEventListener("change", () => debtManager.updateCurrencyLabels());
-  document.getElementById("toCurrency").addEventListener("change", () => debtManager.updateCurrencyLabels());
+  document.getElementById("addClientBtn").onclick = () => debtManager.openAddClientModal();
+  document.getElementById("configRatesBtn").onclick = () => debtManager.openConfigRatesModal();
+  const showPaidBtn = document.getElementById("showPaidClientsBtn");
+  if (showPaidBtn) showPaidBtn.onclick = () => debtManager.togglePaidClients();
+  // Los formularios ahora son modales dinámicos, no estáticos
+  document.getElementById("globalCurrency").onchange = (e) => debtManager.changeGlobalCurrency(e.target.value);
+  const fromCurrency = document.getElementById("fromCurrency");
+  if (fromCurrency) fromCurrency.onchange = () => debtManager.updateCurrencyLabels();
+  const toCurrency = document.getElementById("toCurrency");
+  if (toCurrency) toCurrency.onchange = () => debtManager.updateCurrencyLabels();
+  // Cerrar modales estáticos
   document.querySelectorAll(".modal-close").forEach((btn) => {
-    btn.addEventListener("click", (e) => {
+    btn.onclick = (e) => {
       const modal = e.target.closest(".modal");
-      debtManager.closeModal(modal.id);
-    });
+      if (modal) debtManager.closeModal(modal.id);
+    };
   });
+  // Cerrar modales al hacer click fuera del contenido
   document.querySelectorAll(".modal").forEach((modal) => {
-    modal.addEventListener("click", (e) => {
-      if (e.target === modal) {
-        debtManager.closeModal(modal.id);
-      }
-    });
+    modal.onclick = (e) => {
+      if (e.target === modal) debtManager.closeModal(modal.id);
+    };
   });
-  document.getElementById("cancelDelete").addEventListener("click", () => debtManager.closeModal("deleteModal"));
-  document.getElementById("confirmDelete").addEventListener("click", () => debtManager.confirmDelete());
-  document.getElementById("cancelDeleteOperation").addEventListener("click", () => debtManager.closeModal("deleteOperationModal"));
-  document.getElementById("confirmDeleteOperation").addEventListener("click", () => debtManager.confirmDeleteOperation());
+  // Eliminar operación del historial
+  const cancelDeleteOp = document.getElementById("cancelDeleteOperation");
+  if (cancelDeleteOp) cancelDeleteOp.onclick = () => debtManager.closeModal("deleteOperationModal");
+  const confirmDeleteOp = document.getElementById("confirmDeleteOperation");
+  if (confirmDeleteOp) confirmDeleteOp.onclick = () => debtManager.confirmDeleteOperation();
 }
 
 export function initUI() {
