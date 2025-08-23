@@ -207,8 +207,8 @@ export class DebtManager {
     const fromLabel = modal.querySelector('#fromLabel');
     const toLabel = modal.querySelector('#toLabel');
     fromCurrency.onchange = toCurrency.onchange = () => {
-      fromLabel.textContent = fromCurrency.value === 'CUP_CASH' ? 'CUP Efectivo' : fromCurrency.value === 'CUP_TRANSFER' ? 'CUP Transferencia' : fromCurrency.value;
-      toLabel.textContent = toCurrency.value === 'CUP_CASH' ? 'CUP Efectivo' : toCurrency.value === 'CUP_TRANSFER' ? 'CUP Transferencia' : toCurrency.value;
+      fromLabel.textContent = this._getCurrencyLabel(fromCurrency.value);
+      toLabel.textContent = this._getCurrencyLabel(toCurrency.value);
     };
     modal.querySelector('#configRatesForm').onsubmit = (e) => {
       e.preventDefault();
@@ -223,7 +223,7 @@ export class DebtManager {
         alert('La tasa debe ser un número positivo.');
         return;
       }
-      this.exchangeRates[`${from}-${to}`] = rate;
+      this._updateExchangeRates(from, to, rate);
       this.saveData();
       this.updateRatesDisplay();
       this.removeDynamicModal();
@@ -434,6 +434,35 @@ export class DebtManager {
            !isNaN(amount) && 
            isFinite(amount) && 
            amount > 0;
+  }
+
+  /**
+   * Actualiza las tasas de cambio de forma inteligente
+   * @private
+   * @param {string} from - Moneda origen
+   * @param {string} to - Moneda destino
+   * @param {number} rate - Tasa de conversión
+   */
+  _updateExchangeRates(from, to, rate) {
+    this.exchangeRates[`${from}-${to}`] = rate;
+    this.exchangeRates[`${to}-${from}`] = 1 / rate;
+
+    const currencies = ['USD', 'CUP_CASH', 'CUP_TRANSFER'];
+    const other = currencies.find(c => c !== from && c !== to);
+
+    if (other) {
+      const fromOtherRate = this.exchangeRates[`${from}-${other}`];
+      if (fromOtherRate) {
+        this.exchangeRates[`${to}-${other}`] = 1 / (rate * fromOtherRate);
+        this.exchangeRates[`${other}-${to}`] = rate * fromOtherRate;
+      }
+
+      const toOtherRate = this.exchangeRates[`${to}-${other}`];
+      if (toOtherRate) {
+        this.exchangeRates[`${from}-${other}`] = rate * toOtherRate;
+        this.exchangeRates[`${other}-${from}`] = 1 / (rate * toOtherRate);
+      }
+    }
   }
 
   /**
