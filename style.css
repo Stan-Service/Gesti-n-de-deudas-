@@ -86,6 +86,16 @@
     animation: slideOut 0.3s ease-out forwards;
 }
 
+.client-card.paid {
+    opacity: 0.8;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+}
+
+.client-card.paid .client-name {
+    text-decoration: line-through;
+    color: #059669;
+}
+
 @keyframes slideOut {
     to {
         opacity: 0;
@@ -104,7 +114,7 @@
 }
 
 .history-content.expanded {
-    max-height: 300px;
+    max-height: 400px;
     padding: 16px 0;
 }
 
@@ -116,6 +126,23 @@
 
 .btn-feedback:active {
     transform: scale(0.98);
+}
+
+/* Botones con colores consistentes */
+.btn-payment {
+    background-color: #059669 !important;
+}
+
+.btn-payment:hover {
+    background-color: #047857 !important;
+}
+
+.btn-increase {
+    background-color: #dc2626 !important;
+}
+
+.btn-increase:hover {
+    background-color: #b91c1c !important;
 }
 
 /* Inputs móviles */
@@ -137,7 +164,7 @@ input:focus, select:focus {
 
 /* Scrollbar personalizado para el historial */
 .history-scroll {
-    max-height: 200px;
+    max-height: 250px;
     overflow-y: auto;
 }
 
@@ -163,6 +190,21 @@ input:focus, select:focus {
 .debt-amount {
     font-variant-numeric: tabular-nums;
     font-weight: 600;
+}
+
+/* Operaciones del historial */
+.history-entry {
+    position: relative;
+    transition: all 0.2s ease-out;
+}
+
+.history-entry:hover .delete-operation {
+    opacity: 1;
+}
+
+.delete-operation {
+    opacity: 0;
+    transition: opacity 0.2s ease-out;
 }
 
 /* Mejoras de accesibilidad */
@@ -229,4 +271,17 @@ input:focus, select:focus {
     .modal.show {
         align-items: stretch;
     }
+}
+
+/* Selector de moneda mejorado */
+.currency-selector-wrapper {
+    position: relative;
+}
+
+.currency-labels {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: #6b7280;
 }
