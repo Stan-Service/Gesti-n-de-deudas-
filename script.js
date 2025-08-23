@@ -1,207 +1,669 @@
-// ==== LocalStorage Keys ====
-const CLIENTS_KEY = 'gestorDeudasClients';
-const RATES_KEY = 'gestorDeudasRates';
+// Gestor de Deudas - JavaScript Principal
+class DebtManager {
+  constructor() {
+    this.clients = JSON.parse(localStorage.getItem("debtClients") || "[]");
+    this.exchangeRates = JSON.parse(
+      localStorage.getItem("exchangeRates") || "{}"
+    );
+    this.globalCurrency = localStorage.getItem("globalCurrency") || "USD";
+    this.currentDeleteId = null;
 
-// ==== DOM ====
-const clientsContainer = document.getElementById('clientsContainer');
-const modalAddClient = document.getElementById('modalAddClient');
-const modalConfig = document.getElementById('modalConfig');
-const modalConfirm = document.getElementById('modalConfirm');
-const toggleAddClient = document.getElementById('toggleAddClient');
-const toggleConfig = document.getElementById('toggleConfig');
-const saveClient = document.getElementById('saveClient');
-const cancelAddClient = document.getElementById('cancelAddClient');
-const clientName = document.getElementById('clientName');
-const clientDebt = document.getElementById('clientDebt');
-const clientCurrency = document.getElementById('clientCurrency');
-const globalCurrency = document.getElementById('globalCurrency');
+    this.init();
+  }
 
-const fromCurrency = document.getElementById('fromCurrency');
-const toCurrency = document.getElementById('toCurrency');
-const rateValue = document.getElementById('rateValue');
-const saveRate = document.getElementById('saveRate');
-const cancelRate = document.getElementById('cancelRate');
-const ratesList = document.getElementById('ratesList');
+  init() {
+    this.bindEvents();
+    this.renderClients();
+    this.updateGlobalCurrency();
+    this.updateRatesDisplay();
+    this.setDefaultRates();
+  }
 
-const cancelDelete = document.getElementById('cancelDelete');
-const confirmDelete = document.getElementById('confirmDelete');
+  setDefaultRates() {
+    if (Object.keys(this.exchangeRates).length === 0) {
+      this.exchangeRates = {
+        "USD-CUP_CASH": 120,
+        "USD-CUP_TRANSFER": 115,
+        "CUP_CASH-CUP_TRANSFER": 0.96,
+      };
+      this.saveData();
+    }
+  }
 
-let clients = JSON.parse(localStorage.getItem(CLIENTS_KEY)) || [];
-let rates = JSON.parse(localStorage.getItem(RATES_KEY)) || {
-  "USD_CUP": 400,
-  "USD_CUPT": 400,
-  "CUP_CUPT": 1
-};
-let deleteClientId = null;
+  bindEvents() {
+    // Botones principales
+    document
+      .getElementById("addClientBtn")
+      .addEventListener("click", () => this.openModal("addClientModal"));
+    document
+      .getElementById("configRatesBtn")
+      .addEventListener("click", () => this.openModal("configRatesModal"));
 
-// ==== Functions ====
-function saveClients() {
-  localStorage.setItem(CLIENTS_KEY, JSON.stringify(clients));
-}
+    // Formularios
+    document
+      .getElementById("addClientForm")
+      .addEventListener("submit", (e) => this.handleAddClient(e));
+    document
+      .getElementById("configRatesForm")
+      .addEventListener("submit", (e) => this.handleConfigRates(e));
 
-function saveRates() {
-  localStorage.setItem(RATES_KEY, JSON.stringify(rates));
-  updateRatesDisplay();
-}
+    // Moneda global
+    document
+      .getElementById("globalCurrency")
+      .addEventListener("change", (e) =>
+        this.changeGlobalCurrency(e.target.value)
+      );
 
-function updateRatesDisplay() {
-  ratesList.innerHTML = '';
-  const pairs = Object.keys(rates);
-  pairs.forEach(pair => {
-    const val = rates[pair];
-    let text = '';
-    if(pair === 'USD_CUP') text = `1 USD = ${val} CUP`;
-    if(pair === 'USD_CUPT') text = `1 USD = ${val} CUP transferencia`;
-    if(pair === 'CUP_CUPT') text = `1 CUP = ${val} CUP transferencia`;
-    const div = document.createElement('div');
-    div.textContent = text;
-    ratesList.appendChild(div);
-  });
-}
-
-function convert(amount, from, to) {
-  if(from === to) return amount;
-  if(from === 'USD' && to === 'CUP') return amount * rates['USD_CUP'];
-  if(from === 'USD' && to === 'CUPT') return amount * rates['USD_CUPT'];
-  if(from === 'CUP' && to === 'USD') return amount / rates['USD_CUP'];
-  if(from === 'CUPT' && to === 'USD') return amount / rates['USD_CUPT'];
-  if(from === 'CUP' && to === 'CUPT') return amount * rates['CUP_CUPT'];
-  if(from === 'CUPT' && to === 'CUP') return amount / rates['CUP_CUPT'];
-  return amount;
-}
-
-function renderClients() {
-  clientsContainer.innerHTML = '';
-  clients.forEach((c, index) => {
-    const card = document.createElement('div');
-    card.className = 'client-card bg-white p-4 rounded shadow flex flex-col';
-    
-    const top = document.createElement('div');
-    top.className = 'flex justify-between items-center mb-2';
-    const name = document.createElement('h3');
-    name.className = 'font-bold text-lg';
-    name.textContent = c.name;
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = 'X';
-    deleteBtn.className = 'bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600';
-    deleteBtn.onclick = () => { deleteClientId = index; openModal(modalConfirm); };
-    top.appendChild(name);
-    top.appendChild(deleteBtn);
-
-    const debtDisplay = document.createElement('p');
-    const amount = convert(c.debt, c.currency, globalCurrency.value);
-    debtDisplay.textContent = `Deuda: ${amount.toFixed(2)} ${globalCurrency.value}`;
-    debtDisplay.className = 'mb-2';
-
-    // Historial
-    const historyToggle = document.createElement('button');
-    historyToggle.textContent = 'Mostrar historial';
-    historyToggle.className = 'text-blue-500 mb-2 hover:underline';
-    const historyDiv = document.createElement('div');
-    historyDiv.className = 'client-history hidden flex flex-col gap-1 text-sm';
-    c.history.forEach(h => {
-      const hDiv = document.createElement('div');
-      hDiv.textContent = `${h.type === 'add' ? '+' : '-'} ${convert(h.amount, c.currency, globalCurrency.value).toFixed(2)} ${globalCurrency.value} (${h.type})`;
-      historyDiv.appendChild(hDiv);
+    // Cerrar modales
+    document.querySelectorAll(".modal-close").forEach((btn) => {
+      btn.addEventListener("click", (e) => {
+        const modal = e.target.closest(".modal");
+        this.closeModal(modal.id);
+      });
     });
-    historyToggle.onclick = () => {
-      historyDiv.classList.toggle('hidden');
-      historyToggle.textContent = historyDiv.classList.contains('hidden') ? 'Mostrar historial' : 'Ocultar historial';
+
+    // Cerrar modal al hacer click fuera
+    document.querySelectorAll(".modal").forEach((modal) => {
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) {
+          this.closeModal(modal.id);
+        }
+      });
+    });
+
+    // Modal de eliminación
+    document
+      .getElementById("cancelDelete")
+      .addEventListener("click", () => this.closeModal("deleteModal"));
+    document
+      .getElementById("confirmDelete")
+      .addEventListener("click", () => this.confirmDelete());
+  }
+
+  openModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.classList.add("show");
+    document.body.style.overflow = "hidden";
+
+    // Focus en primer input
+    setTimeout(() => {
+      const firstInput = modal.querySelector("input, select");
+      if (firstInput) firstInput.focus();
+    }, 100);
+  }
+
+  closeModal(modalId) {
+    const modal = document.getElementById(modalId);
+    modal.classList.remove("show");
+    document.body.style.overflow = "";
+
+    // Reset formularios
+    const form = modal.querySelector("form");
+    if (form) form.reset();
+  }
+
+  handleAddClient(e) {
+    e.preventDefault();
+
+    const name = document.getElementById("clientName").value.trim();
+    const initialDebt = parseFloat(
+      document.getElementById("initialDebt").value
+    );
+    const currency = document.getElementById("clientCurrency").value;
+
+    if (!name || isNaN(initialDebt) || initialDebt < 0) {
+      alert("Por favor completa todos los campos correctamente");
+      return;
+    }
+
+    const client = {
+      id: Date.now(),
+      name,
+      originalDebt: initialDebt,
+      currency,
+      history: [
+        {
+          type: "initial",
+          amount: initialDebt,
+          date: new Date().toLocaleDateString("es-ES"),
+          description: "Deuda inicial",
+        },
+      ],
     };
 
-    // Operaciones
-    const opInput = document.createElement('input');
-    opInput.type = 'number';
-    opInput.placeholder = 'Monto';
-    opInput.className = 'p-2 border rounded mb-1 w-full';
-    const addBtn = document.createElement('button');
-    addBtn.textContent = '+';
-    addBtn.className = 'bg-green-500 text-white px-4 py-2 rounded mr-1 hover:bg-green-600';
-    addBtn.onclick = () => {
-      const val = parseFloat(opInput.value);
-      if(!isNaN(val)) { c.debt += val; c.history.push({type:'add', amount: val}); saveClients(); renderClients(); opInput.value=''; }
+    this.clients.push(client);
+    this.saveData();
+    this.renderClients();
+    this.closeModal("addClientModal");
+
+    // Scroll al nuevo cliente
+    setTimeout(() => {
+      const newCard = document.querySelector(`[data-client-id="${client.id}"]`);
+      if (newCard) {
+        newCard.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+    }, 100);
+  }
+
+  handleConfigRates(e) {
+    e.preventDefault();
+
+    const pair = document.getElementById("currencyPair").value;
+    const rate = parseFloat(document.getElementById("conversionRate").value);
+
+    if (isNaN(rate) || rate <= 0) {
+      alert("Ingresa una tasa válida");
+      return;
+    }
+
+    this.exchangeRates[pair] = rate;
+    this.calculateThirdRate();
+    this.saveData();
+    this.renderClients();
+    this.updateRatesDisplay();
+    this.closeModal("configRatesModal");
+  }
+
+  calculateThirdRate() {
+    const rates = this.exchangeRates;
+
+    // Si tenemos USD->CUP_CASH y USD->CUP_TRANSFER, calculamos CUP_CASH->CUP_TRANSFER
+    if (rates["USD-CUP_CASH"] && rates["USD-CUP_TRANSFER"]) {
+      rates["CUP_CASH-CUP_TRANSFER"] =
+        rates["USD-CUP_TRANSFER"] / rates["USD-CUP_CASH"];
+    }
+    // Si tenemos USD->CUP_CASH y CUP_CASH->CUP_TRANSFER, calculamos USD->CUP_TRANSFER
+    else if (rates["USD-CUP_CASH"] && rates["CUP_CASH-CUP_TRANSFER"]) {
+      rates["USD-CUP_TRANSFER"] =
+        rates["USD-CUP_CASH"] * rates["CUP_CASH-CUP_TRANSFER"];
+    }
+    // Si tenemos USD->CUP_TRANSFER y CUP_CASH->CUP_TRANSFER, calculamos USD->CUP_CASH
+    else if (rates["USD-CUP_TRANSFER"] && rates["CUP_CASH-CUP_TRANSFER"]) {
+      rates["USD-CUP_CASH"] =
+        rates["USD-CUP_TRANSFER"] / rates["CUP_CASH-CUP_TRANSFER"];
+    }
+  }
+
+  changeGlobalCurrency(currency) {
+    this.globalCurrency = currency;
+    localStorage.setItem("globalCurrency", currency);
+    this.renderClients();
+  }
+
+  updateGlobalCurrency() {
+    document.getElementById("globalCurrency").value = this.globalCurrency;
+  }
+
+  convertCurrency(amount, fromCurrency, toCurrency) {
+    if (fromCurrency === toCurrency) return amount;
+
+    const rates = this.exchangeRates;
+
+    // Conversión directa
+    const directKey = `${fromCurrency}-${toCurrency}`;
+    if (rates[directKey]) {
+      return amount * rates[directKey];
+    }
+
+    // Conversión inversa
+    const inverseKey = `${toCurrency}-${fromCurrency}`;
+    if (rates[inverseKey]) {
+      return amount / rates[inverseKey];
+    }
+
+    // Conversión a través de USD
+    if (fromCurrency !== "USD" && toCurrency !== "USD") {
+      const toUSD = this.convertCurrency(amount, fromCurrency, "USD");
+      return this.convertCurrency(toUSD, "USD", toCurrency);
+    }
+
+    return amount; // Fallback
+  }
+
+  getCurrentDebt(client) {
+    return client.history.reduce((total, entry) => {
+      switch (entry.type) {
+        case "initial":
+        case "increase":
+          return total + entry.amount;
+        case "payment":
+          return total - entry.amount;
+        default:
+          return total;
+      }
+    }, 0);
+  }
+
+  renderClients() {
+    const container = document.getElementById("clientsContainer");
+    const emptyState = document.getElementById("emptyState");
+
+    if (this.clients.length === 0) {
+      container.innerHTML = "";
+      emptyState.style.display = "block";
+      return;
+    }
+
+    emptyState.style.display = "none";
+
+    container.innerHTML = this.clients
+      .map((client) => {
+        const currentDebt = this.getCurrentDebt(client);
+        const convertedDebt = this.convertCurrency(
+          currentDebt,
+          client.currency,
+          this.globalCurrency
+        );
+        const currencySymbol = this.getCurrencySymbol(this.globalCurrency);
+
+        return `
+                <div class="client-card bg-white rounded-xl p-4 shadow-sm border hover-lift transition-all" data-client-id="${
+                  client.id
+                }">
+                    <div class="flex justify-between items-start mb-3">
+                        <div class="flex-1">
+                            <h3 class="font-semibold text-gray-800 text-lg">${
+                              client.name
+                            }</h3>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span class="currency-indicator currency-${client.currency
+                                  .toLowerCase()
+                                  .replace(
+                                    "_",
+                                    "-"
+                                  )} text-sm text-gray-600 pl-3">
+                                    ${this.getCurrencyLabel(client.currency)}
+                                </span>
+                            </div>
+                        </div>
+                        <button onclick="debtManager.deleteClient(${
+                          client.id
+                        })" 
+                                class="text-red-500 hover:text-red-700 hover:bg-red-50 p-2 rounded-full transition-colors touch-friendly">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                            </svg>
+                        </button>
+                    </div>
+                    
+                    <div class="mb-4">
+                        <div class="debt-amount text-2xl font-bold ${
+                          convertedDebt >= 0 ? "text-red-600" : "text-green-600"
+                        }">
+                            ${currencySymbol}${Math.abs(convertedDebt).toFixed(
+          2
+        )}
+                        </div>
+                        <div class="text-sm text-gray-500">
+                            ${convertedDebt >= 0 ? "Debe" : "A favor"}
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2 mb-3">
+                        <div class="flex-1">
+                            <input type="number" 
+                                   id="amount-${client.id}" 
+                                   placeholder="Monto" 
+                                   step="0.01" 
+                                   min="0.01"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        </div>
+                        <button onclick="debtManager.addPayment(${client.id})" 
+                                class="btn-feedback bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-green-700 transition-colors touch-friendly">
+                            Pago
+                        </button>
+                        <button onclick="debtManager.addIncrease(${client.id})" 
+                                class="btn-feedback bg-orange-600 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-orange-700 transition-colors touch-friendly">
+                            + Deuda
+                        </button>
+                    </div>
+                    
+                    <button onclick="debtManager.toggleHistory(${client.id})" 
+                            class="w-full text-left text-sm text-gray-600 hover:text-gray-800 py-2 flex items-center justify-between transition-colors">
+                        <span>Ver historial (${client.history.length})</span>
+                        <svg class="w-4 h-4 transform transition-transform" id="arrow-${
+                          client.id
+                        }">
+                            <path fill="currentColor" d="M7 10l5 5 5-5z"/>
+                        </svg>
+                    </button>
+                    
+                    <div id="history-${client.id}" class="history-content">
+                        <div class="history-scroll space-y-2">
+                            ${client.history
+                              .slice()
+                              .reverse()
+                              .map(
+                                (entry) => `
+                                <div class="flex justify-between items-center py-2 px-3 bg-gray-50 rounded-lg text-sm">
+                                    <div>
+                                        <span class="font-medium ${this.getEntryColor(
+                                          entry.type
+                                        )}">${this.getEntryLabel(
+                                  entry.type
+                                )}</span>
+                                        <div class="text-gray-600">${
+                                          entry.description || ""
+                                        }</div>
+                                        <div class="text-xs text-gray-500">${
+                                          entry.date
+                                        }</div>
+                                    </div>
+                                    <span class="font-medium ${this.getEntryColor(
+                                      entry.type
+                                    )}">
+                                        ${this.getCurrencySymbol(
+                                          client.currency
+                                        )}${entry.amount.toFixed(2)}
+                                    </span>
+                                </div>
+                            `
+                              )
+                              .join("")}
+                        </div>
+                    </div>
+                </div>
+            `;
+      })
+      .join("");
+  }
+
+  addPayment(clientId) {
+    const input = document.getElementById(`amount-${clientId}`);
+    const amount = parseFloat(input.value);
+
+    if (isNaN(amount) || amount <= 0) {
+      alert("Ingresa un monto válido");
+      return;
+    }
+
+    this.addHistoryEntry(clientId, "payment", amount, `Pago recibido`);
+    input.value = "";
+  }
+
+  addIncrease(clientId) {
+    const input = document.getElementById(`amount-${clientId}`);
+    const amount = parseFloat(input.value);
+
+    if (isNaN(amount) || amount <= 0) {
+      alert("Ingresa un monto válido");
+      return;
+    }
+
+    this.addHistoryEntry(clientId, "increase", amount, `Aumento de deuda`);
+    input.value = "";
+  }
+
+  addHistoryEntry(clientId, type, amount, description) {
+    const client = this.clients.find((c) => c.id === clientId);
+    if (!client) return;
+
+    client.history.push({
+      type,
+      amount,
+      description,
+      date: new Date().toLocaleDateString("es-ES"),
+      timestamp: Date.now(),
+    });
+
+    this.saveData();
+    this.renderClients();
+
+    // Feedback visual
+    const card = document.querySelector(`[data-client-id="${clientId}"]`);
+    if (card) {
+      card.style.transform = "scale(1.02)";
+      setTimeout(() => {
+        card.style.transform = "";
+      }, 200);
+    }
+  }
+
+  toggleHistory(clientId) {
+    const historyDiv = document.getElementById(`history-${clientId}`);
+    const arrow = document.getElementById(`arrow-${clientId}`);
+
+    if (historyDiv.classList.contains("expanded")) {
+      historyDiv.classList.remove("expanded");
+      arrow.style.transform = "";
+    } else {
+      historyDiv.classList.add("expanded");
+      arrow.style.transform = "rotate(180deg)";
+    }
+  }
+
+  deleteClient(clientId) {
+    this.currentDeleteId = clientId;
+    this.openModal("deleteModal");
+  }
+
+  confirmDelete() {
+    if (this.currentDeleteId) {
+      const card = document.querySelector(
+        `[data-client-id="${this.currentDeleteId}"]`
+      );
+      if (card) {
+        card.classList.add("removing");
+        setTimeout(() => {
+          this.clients = this.clients.filter(
+            (c) => c.id !== this.currentDeleteId
+          );
+          this.saveData();
+          this.renderClients();
+        }, 300);
+      }
+      this.currentDeleteId = null;
+      this.closeModal("deleteModal");
+    }
+  }
+
+  updateRatesDisplay() {
+    const container = document.getElementById("currentRates");
+    const rates = this.exchangeRates;
+
+    const rateLabels = {
+      "USD-CUP_CASH": "USD → CUP Efectivo",
+      "USD-CUP_TRANSFER": "USD → CUP Transferencia",
+      "CUP_CASH-CUP_TRANSFER": "CUP Efectivo → CUP Transferencia",
     };
-    const subBtn = document.createElement('button');
-    subBtn.textContent = '-';
-    subBtn.className = 'bg-red-500 text-white px-4 py-2 rounded hover:bg-red-600';
-    subBtn.onclick = () => {
-      const val = parseFloat(opInput.value);
-      if(!isNaN(val)) { c.debt -= val; c.history.push({type:'sub', amount: val}); saveClients(); renderClients(); opInput.value=''; }
+
+    container.innerHTML =
+      Object.entries(rates)
+        .map(
+          ([key, rate]) => `
+                <div class="flex justify-between items-center py-1">
+                    <span>${rateLabels[key] || key}</span>
+                    <span class="font-medium">${rate.toFixed(4)}</span>
+                </div>
+            `
+        )
+        .join("") ||
+      '<div class="text-gray-400">No hay tasas configuradas</div>';
+  }
+
+  getCurrencySymbol(currency) {
+    const symbols = {
+      USD: "$",
+      CUP_CASH: "₱",
+      CUP_TRANSFER: "₱",
     };
+    return symbols[currency] || "$";
+  }
 
-    const opDiv = document.createElement('div');
-    opDiv.className = 'flex gap-2 mb-2 flex-wrap';
-    opDiv.appendChild(opInput);
-    opDiv.appendChild(addBtn);
-    opDiv.appendChild(subBtn);
+  getCurrencyLabel(currency) {
+    const labels = {
+      USD: "USD",
+      CUP_CASH: "CUP Efectivo",
+      CUP_TRANSFER: "CUP Transferencia",
+    };
+    return labels[currency] || currency;
+  }
 
-    card.appendChild(top);
-    card.appendChild(debtDisplay);
-    card.appendChild(historyToggle);
-    card.appendChild(historyDiv);
-    card.appendChild(opDiv);
+  getEntryColor(type) {
+    const colors = {
+      initial: "text-blue-600",
+      payment: "text-green-600",
+      increase: "text-red-600",
+    };
+    return colors[type] || "text-gray-600";
+  }
 
-    clientsContainer.appendChild(card);
+  getEntryLabel(type) {
+    const labels = {
+      initial: "Deuda inicial",
+      payment: "Pago",
+      increase: "Aumento",
+    };
+    return labels[type] || type;
+  }
+
+  saveData() {
+    localStorage.setItem("debtClients", JSON.stringify(this.clients));
+    localStorage.setItem("exchangeRates", JSON.stringify(this.exchangeRates));
+  }
+}
+
+// Inicializar la aplicación
+let debtManager;
+
+document.addEventListener("DOMContentLoaded", () => {
+  debtManager = new DebtManager();
+});
+
+// Eventos táctiles mejorados
+document.addEventListener("touchstart", (e) => {
+  if (e.target.classList.contains("btn-feedback")) {
+    e.target.style.transform = "scale(0.98)";
+  }
+});
+
+document.addEventListener("touchend", (e) => {
+  if (e.target.classList.contains("btn-feedback")) {
+    setTimeout(() => {
+      e.target.style.transform = "";
+    }, 100);
+  }
+});
+
+// Prevenir zoom en inputs en iOS
+document.addEventListener("touchstart", (e) => {
+  if (e.target.tagName === "INPUT" || e.target.tagName === "SELECT") {
+    e.target.style.fontSize = "16px";
+  }
+});
+
+// Manejar orientación de dispositivo
+window.addEventListener("orientationchange", () => {
+  setTimeout(() => {
+    // Reajustar modales si están abiertos
+    const openModal = document.querySelector(".modal.show");
+    if (openModal) {
+      openModal.scrollTop = 0;
+    }
+  }, 100);
+});
+
+// Service Worker para mejor rendimiento (opcional)
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    // Registrar service worker si existe
+    // navigator.serviceWorker.register('/sw.js');
   });
 }
 
-// ==== Modal Functions ====
-function openModal(modal) {
-  modal.classList.remove('hidden');
-  document.body.classList.add('modal-open');
-}
-function closeModal(modal) {
-  modal.classList.add('hidden');
-  document.body.classList.remove('modal-open');
-}
+// Utilidades adicionales
+class Utils {
+  static formatCurrency(amount, currency) {
+    const symbols = {
+      USD: "$",
+      CUP_CASH: "₱",
+      CUP_TRANSFER: "₱",
+    };
 
-// ==== Event Listeners ====
-toggleAddClient.onclick = () => openModal(modalAddClient);
-cancelAddClient.onclick = () => closeModal(modalAddClient);
-saveClient.onclick = () => {
-  const name = clientName.value.trim();
-  const debt = parseFloat(clientDebt.value);
-  const currency = clientCurrency.value;
-  if(name && !isNaN(debt)) {
-    clients.push({name, debt, currency, history: []});
-    saveClients();
-    renderClients();
-    clientName.value=''; clientDebt.value='';
-    closeModal(modalAddClient);
+    return `${symbols[currency] || "$"}${Math.abs(amount).toFixed(2)}`;
   }
-};
 
-toggleConfig.onclick = () => openModal(modalConfig);
-cancelRate.onclick = () => closeModal(modalConfig);
-saveRate.onclick = () => {
-  const from = fromCurrency.value;
-  const to = toCurrency.value;
-  const val = parseFloat(rateValue.value);
-  if(from && to && !isNaN(val) && from !== to){
-    const key = `${from}_${to}`;
-    rates[key] = val;
-
-    // Auto-calcula tercera tasa
-    if(from === 'USD' && to === 'CUP') rates['CUP_CUPT'] = val / rates['USD_CUPT'] || 1;
-    if(from === 'USD' && to === 'CUPT') rates['CUP_CUPT'] = rates['USD_CUP'] / val || 1;
-    if(from === 'CUP' && to === 'CUPT') rates['USD_CUPT'] = rates['USD_CUP']/val || rates['USD_CUPT'];
-
-    saveRates();
-    rateValue.value='';
+  static debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+      const later = () => {
+        clearTimeout(timeout);
+        func(...args);
+      };
+      clearTimeout(timeout);
+      timeout = setTimeout(later, wait);
+    };
   }
+
+  static vibrate(pattern = [50]) {
+    if ("vibrate" in navigator) {
+      navigator.vibrate(pattern);
+    }
+  }
+
+  static showToast(message, type = "info") {
+    // Crear toast notification
+    const toast = document.createElement("div");
+    toast.className = `fixed bottom-4 left-4 right-4 mx-auto max-w-sm bg-white border rounded-lg shadow-lg p-4 z-50 transform translate-y-full transition-transform`;
+
+    const colors = {
+      success: "border-green-500 text-green-800",
+      error: "border-red-500 text-red-800",
+      info: "border-blue-500 text-blue-800",
+    };
+
+    toast.className += ` ${colors[type] || colors.info}`;
+    toast.textContent = message;
+
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.transform = "translateY(0)";
+    }, 100);
+
+    setTimeout(() => {
+      toast.style.transform = "translateY(100%)";
+      setTimeout(() => {
+        document.body.removeChild(toast);
+      }, 300);
+    }, 3000);
+  }
+}
+
+// Exportar utilidades globalmente
+window.Utils = Utils;
+
+// Manejar errores globales
+window.addEventListener("error", (e) => {
+  console.error("Error global:", e.error);
+  Utils.showToast("Ocurrió un error inesperado", "error");
+});
+
+// Manejar promesas rechazadas
+window.addEventListener("unhandledrejection", (e) => {
+  console.error("Promesa rechazada:", e.reason);
+  Utils.showToast("Error de conexión", "error");
+});
+
+// Optimizaciones de rendimiento
+const observer = new IntersectionObserver(
+  (entries) => {
+    entries.forEach((entry) => {
+      if (entry.isIntersecting) {
+        entry.target.classList.add("animate-fade-in");
+      }
+    });
+  },
+  { threshold: 0.1 }
+);
+
+// Observar nuevos elementos cuando se agreguen
+const observeNewElements = () => {
+  document.querySelectorAll(".client-card:not(.observed)").forEach((card) => {
+    observer.observe(card);
+    card.classList.add("observed");
+  });
 };
 
-globalCurrency.onchange = renderClients;
-
-cancelDelete.onclick = () => { deleteClientId=null; closeModal(modalConfirm); };
-confirmDelete.onclick = () => {
-  if(deleteClientId !== null) clients.splice(deleteClientId,1);
-  saveClients();
-  renderClients();
-  deleteClientId=null;
-  closeModal(modalConfirm);
-};
-
-// ==== Init ====
-updateRatesDisplay();
-renderClients();
+// Llamar después de renderizar
+document.addEventListener("clientsRendered", observeNewElements);
