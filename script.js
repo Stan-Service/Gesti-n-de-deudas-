@@ -6,8 +6,6 @@ const clientNameInput = document.getElementById('clientNameInput');
 const initialDebtInput = document.getElementById('initialDebtInput');
 const initialCurrencySelect = document.getElementById('initialCurrencySelect');
 const clientsList = document.getElementById('clientsList');
-const confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
-const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
 const saveRateBtn = document.getElementById('saveRateBtn');
 const fromCurrencySelect = document.getElementById('fromCurrencySelect');
 const toCurrencySelect = document.getElementById('toCurrencySelect');
@@ -15,27 +13,56 @@ const rateInput = document.getElementById('rateInput');
 const ratesDisplay = document.getElementById('ratesDisplay');
 const globalCurrencySelect = document.getElementById('globalCurrencySelect');
 
-// Variables para los datos
-let clients = [];
-let rates = {}; // { 'USD_CUP-Efectivo': 400, ... }
+// El modal de Bootstrap se debe inicializar después de que el DOM esté listo
+let confirmDeleteModal; 
 let clientToDeleteId = null;
 
-// Funciones principales
+// Variables para los datos, usando 'let' para poder reasignarlas
+let clients = [];
+let rates = {};
+
+// Espera a que el DOM se cargue completamente antes de ejecutar el código
 document.addEventListener('DOMContentLoaded', () => {
+    // Inicializar el modal de confirmación
+    confirmDeleteModal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
+    const confirmDeleteBtn = document.getElementById('confirmDeleteBtn');
+
     loadData();
     renderClients();
     renderRates();
+
+    // Event listeners principales
+    addClientBtn.addEventListener('click', addClient);
+    clientsList.addEventListener('click', handleClientActions);
+    if (confirmDeleteBtn) {
+        confirmDeleteBtn.addEventListener('click', confirmDelete);
+    }
+    saveRateBtn.addEventListener('click', saveGlobalRate);
+    globalCurrencySelect.addEventListener('change', renderClients);
+    toggleControlsBtn.addEventListener('click', () => {
+        const controls = document.getElementById('controls');
+        if (controls) {
+            controls.classList.toggle('collapse');
+        }
+    });
 });
 
+// --- Funciones de Lógica y UI ---
 // Cargar datos desde LocalStorage
 function loadData() {
-    const storedClients = localStorage.getItem('clients');
-    if (storedClients) {
-        clients = JSON.parse(storedClients);
-    }
-    const storedRates = localStorage.getItem('rates');
-    if (storedRates) {
-        rates = JSON.parse(storedRates);
+    try {
+        const storedClients = localStorage.getItem('clients');
+        if (storedClients) {
+            clients = JSON.parse(storedClients);
+        }
+        const storedRates = localStorage.getItem('rates');
+        if (storedRates) {
+            rates = JSON.parse(storedRates);
+        }
+    } catch (e) {
+        console.error("Error al cargar datos de LocalStorage:", e);
+        clients = [];
+        rates = {};
     }
 }
 
@@ -51,9 +78,16 @@ function renderClients() {
     const globalCurrency = globalCurrencySelect.value;
     
     clients.forEach(client => {
-        const clientRate = client.rates[`${client.currency}_${globalCurrency}`] || rates[`${client.currency}_${globalCurrency}`];
-        const convertedDebt = clientRate ? (client.debt * clientRate).toFixed(2) : 'N/A';
-        const debtText = clientRate ? `${convertedDebt} ${globalCurrency}` : `${client.debt} ${client.currency}`;
+        const rateKey = `${client.currency}_${globalCurrency}`;
+        const clientRate = client.rates[rateKey] !== undefined ? client.rates[rateKey] : rates[rateKey];
+        
+        let convertedDebt = 'N/A';
+        let debtText = `${client.debt.toFixed(2)} ${client.currency}`;
+
+        if (clientRate) {
+            convertedDebt = (client.debt * clientRate).toFixed(2);
+            debtText = `${convertedDebt} ${globalCurrency}`;
+        }
 
         const li = document.createElement('li');
         li.className = 'list-group-item';
@@ -64,30 +98,28 @@ function renderClients() {
             </div>
             <div class="debt-actions">
                 <div class="dropdown me-2">
-                    <button class="btn btn-sm btn-info dropdown-toggle" type="button" id="dropdownMenuButton${client.id}" data-bs-toggle="dropdown" aria-expanded="false">
+                    <button class="btn btn-sm btn-info dropdown-toggle" type="button" data-bs-toggle="dropdown">
                         Operación
                     </button>
-                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton${client.id}">
-                        <li>
-                            <div class="d-flex p-2">
-                                <input type="number" class="form-control form-control-sm me-2 operation-input" placeholder="Cantidad">
-                                <button class="btn btn-sm btn-success add-debt-btn me-1">Sumar</button>
-                                <button class="btn btn-sm btn-warning subtract-debt-btn">Restar</button>
-                            </div>
-                        </li>
+                    <ul class="dropdown-menu">
+                        <div class="d-flex p-2">
+                            <input type="number" class="form-control form-control-sm me-2 operation-input" placeholder="Cantidad" step="0.01">
+                            <button class="btn btn-sm btn-success add-debt-btn me-1">Sumar</button>
+                            <button class="btn btn-sm btn-warning subtract-debt-btn">Restar</button>
+                        </div>
                     </ul>
                 </div>
                 <div class="dropdown me-2">
-                    <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" id="configDropdown${client.id}" data-bs-toggle="dropdown" aria-expanded="false">
+                    <button class="btn btn-sm btn-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
                         Configuración
                     </button>
-                    <ul class="dropdown-menu p-2" aria-labelledby="configDropdown${client.id}">
+                    <ul class="dropdown-menu p-2">
                         <div class="row g-2">
                             <div class="col-md-6">
                                 <select class="form-select form-select-sm from-currency-select">
-                                    <option value="USD">USD</option>
-                                    <option value="CUP-Efectivo">CUP (Efectivo)</option>
-                                    <option value="CUP-Transferencia">CUP (Transferencia)</option>
+                                    <option value="USD" ${client.currency === 'USD' ? 'selected' : ''}>USD</option>
+                                    <option value="CUP-Efectivo" ${client.currency === 'CUP-Efectivo' ? 'selected' : ''}>CUP (Efectivo)</option>
+                                    <option value="CUP-Transferencia" ${client.currency === 'CUP-Transferencia' ? 'selected' : ''}>CUP (Transferencia)</option>
                                 </select>
                             </div>
                             <div class="col-md-6">
@@ -113,7 +145,7 @@ function renderClients() {
     });
 }
 
-// Renderizar las tasas de cambio guardadas
+// Renderizar las tasas de cambio globales guardadas
 function renderRates() {
     ratesDisplay.innerHTML = '';
     const rateKeys = Object.keys(rates).reverse().slice(0, 3);
@@ -121,13 +153,14 @@ function renderRates() {
         const [from, to] = key.split('_');
         const rate = rates[key];
         const p = document.createElement('p');
+        p.className = 'my-1';
         p.textContent = `1 ${from} = ${rate} ${to}`;
         ratesDisplay.appendChild(p);
     });
 }
 
 // Agregar un nuevo cliente
-addClientBtn.addEventListener('click', () => {
+function addClient() {
     const name = clientNameInput.value.trim();
     const debt = parseFloat(initialDebtInput.value);
     const currency = initialCurrencySelect.value;
@@ -138,7 +171,7 @@ addClientBtn.addEventListener('click', () => {
             name,
             debt,
             currency,
-            rates: {} // Para las tasas de cambio individuales
+            rates: {}
         };
         clients.push(newClient);
         saveData();
@@ -148,10 +181,10 @@ addClientBtn.addEventListener('click', () => {
     } else {
         alert('Por favor, ingrese un nombre y una deuda válida.');
     }
-});
+}
 
-// Event listener para los botones de la lista de clientes (delegación)
-clientsList.addEventListener('click', (e) => {
+// Manejar todas las acciones del cliente usando delegación de eventos
+function handleClientActions(e) {
     const li = e.target.closest('.list-group-item');
     if (!li) return;
 
@@ -160,7 +193,9 @@ clientsList.addEventListener('click', (e) => {
 
     if (e.target.classList.contains('delete-btn')) {
         clientToDeleteId = clientId;
-        confirmDeleteModal.show();
+        if (confirmDeleteModal) {
+            confirmDeleteModal.show();
+        }
     } else if (e.target.classList.contains('add-debt-btn')) {
         const input = li.querySelector('.operation-input');
         const amount = parseFloat(input.value);
@@ -168,6 +203,7 @@ clientsList.addEventListener('click', (e) => {
             client.debt += amount;
             saveData();
             renderClients();
+            input.value = '';
         }
     } else if (e.target.classList.contains('subtract-debt-btn')) {
         const input = li.querySelector('.operation-input');
@@ -176,6 +212,7 @@ clientsList.addEventListener('click', (e) => {
             client.debt -= amount;
             saveData();
             renderClients();
+            input.value = '';
         }
     } else if (e.target.classList.contains('save-rate-client-btn')) {
         const parent = e.target.closest('.dropdown-menu');
@@ -191,40 +228,35 @@ clientsList.addEventListener('click', (e) => {
             alert('Por favor, ingrese una tasa de cambio válida.');
         }
     }
-});
+}
 
 // Confirmar la eliminación del cliente
-confirmDeleteBtn.addEventListener('click', () => {
+function confirmDelete() {
     if (clientToDeleteId !== null) {
         clients = clients.filter(client => client.id !== clientToDeleteId);
         saveData();
         renderClients();
         clientToDeleteId = null;
-        confirmDeleteModal.hide();
+        if (confirmDeleteModal) {
+            confirmDeleteModal.hide();
+        }
     }
-});
+}
 
 // Guardar una nueva tasa de cambio global
-saveRateBtn.addEventListener('click', () => {
+function saveGlobalRate() {
     const from = fromCurrencySelect.value;
     const to = toCurrencySelect.value;
     const rate = parseFloat(rateInput.value);
 
     if (!isNaN(rate) && rate > 0) {
-        rates[`${from}_${to}`] = rate;
+        const rateKey = `${from}_${to}`;
+        rates[rateKey] = rate;
         saveData();
         renderRates();
-        renderClients(); // Actualizar las deudas mostradas
+        renderClients();
+        rateInput.value = '';
     } else {
         alert('Por favor, ingrese una tasa de cambio válida.');
     }
-});
-
-// Event listener para el cambio de moneda global
-globalCurrencySelect.addEventListener('change', renderClients);
-
-// Botón para mostrar/ocultar los controles
-toggleControlsBtn.addEventListener('click', () => {
-    controlsDiv.classList.toggle('collapse');
-    controlsDiv.classList.toggle('show');
-});
+}
