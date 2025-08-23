@@ -1,17 +1,232 @@
-/* Estilos extra para transiciones y scroll en móviles */
-#clientsContainer {
-  scroll-behavior: smooth;
+/* Estilos personalizados para complementar Tailwind */
+
+.touch-friendly {
+    min-height: 44px;
+    min-width: 44px;
 }
 
-.modal-open {
-  overflow: hidden;
+/* Modales */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 50;
+    padding: 16px;
+    overflow-y: auto;
 }
 
+.modal.show {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    animation: fadeIn 0.2s ease-out;
+}
+
+@media (min-width: 640px) {
+    .modal.show {
+        align-items: center;
+    }
+}
+
+.modal-content {
+    background: white;
+    border-radius: 12px;
+    width: 100%;
+    max-width: 500px;
+    padding: 24px;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    animation: slideUp 0.3s ease-out;
+    margin-top: 20px;
+}
+
+@media (min-width: 640px) {
+    .modal-content {
+        margin-top: 0;
+    }
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Cards de clientes */
 .client-card {
-  transition: all 0.3s ease;
+    animation: slideIn 0.3s ease-out;
 }
 
-.client-history {
-  max-height: 200px;
-  overflow-y: auto;
+.client-card.removing {
+    animation: slideOut 0.3s ease-out forwards;
+}
+
+@keyframes slideOut {
+    to {
+        opacity: 0;
+        transform: translateX(20px);
+        height: 0;
+        margin-bottom: 0;
+        padding: 0;
+    }
+}
+
+/* Historial plegable */
+.history-content {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+}
+
+.history-content.expanded {
+    max-height: 300px;
+    padding: 16px 0;
+}
+
+/* Botones de feedback táctil */
+.btn-feedback {
+    transform: scale(1);
+    transition: transform 0.1s ease-out, background-color 0.2s ease-out;
+}
+
+.btn-feedback:active {
+    transform: scale(0.98);
+}
+
+/* Inputs móviles */
+input, select, button {
+    -webkit-appearance: none;
+    border-radius: 8px;
+}
+
+input:focus, select:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+/* Estados de carga */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* Scrollbar personalizado para el historial */
+.history-scroll {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.history-scroll::-webkit-scrollbar {
+    width: 6px;
+}
+
+.history-scroll::-webkit-scrollbar-track {
+    background: #f1f5f9;
+    border-radius: 3px;
+}
+
+.history-scroll::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 3px;
+}
+
+.history-scroll::-webkit-scrollbar-thumb:hover {
+    background: #94a3b8;
+}
+
+/* Números grandes más legibles */
+.debt-amount {
+    font-variant-numeric: tabular-nums;
+    font-weight: 600;
+}
+
+/* Mejoras de accesibilidad */
+@media (prefers-reduced-motion: reduce) {
+    *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
+}
+
+/* Estados hover mejorados para desktop */
+@media (hover: hover) {
+    .hover-lift:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
+    }
+}
+
+/* Indicador visual de moneda */
+.currency-indicator {
+    position: relative;
+}
+
+.currency-indicator::before {
+    content: '';
+    position: absolute;
+    left: -8px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 20px;
+    border-radius: 2px;
+}
+
+.currency-usd::before {
+    background-color: #10b981;
+}
+
+.currency-cup-cash::before {
+    background-color: #f59e0b;
+}
+
+.currency-cup-transfer::before {
+    background-color: #3b82f6;
+}
+
+/* Mejoras responsive */
+@media (max-width: 640px) {
+    .modal {
+        padding: 0;
+    }
+    
+    .modal-content {
+        border-radius: 0;
+        height: 100vh;
+        padding: 24px 20px;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        margin-top: 0;
+    }
+    
+    .modal.show {
+        align-items: stretch;
+    }
 }
