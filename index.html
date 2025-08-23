@@ -1,116 +1,85 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Gestor de Deudas</title>
-  <!-- Tailwind CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@3.3.3/dist/tailwind.min.css" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
-<body class="bg-gray-50 text-gray-800">
-  <header class="bg-white shadow-sm sticky top-0 z-20">
-    <div class="max-w-6xl mx-auto px-4 py-4 flex items-center justify-between gap-4">
-      <div class="flex items-center gap-4">
-        <h1 class="text-xl font-semibold">Gestor de Deudas</h1>
-        <p class="text-sm text-gray-500">Clara • moderna • persistente</p>
-      </div>
+<body class="bg-gray-50 min-h-screen flex flex-col items-center p-4">
 
-      <div class="flex items-center gap-3">
-        <label class="text-sm text-gray-600 mr-2">Ver en:</label>
-        <select id="globalCurrency" class="border rounded px-2 py-1">
-          <option value="USD">USD</option>
-          <option value="CUP_EF">CUP (Efectivo)</option>
-          <option value="CUP_TR">CUP (Transferencia)</option>
-        </select>
-
-        <button id="toggleAddClient" class="px-3 py-1 border rounded bg-white hover:bg-gray-50">Añadir cliente</button>
-        <button id="toggleRates" class="px-3 py-1 border rounded bg-white hover:bg-gray-50">Config. tasas</button>
-        <button id="clearAll" class="px-3 py-1 border rounded text-sm text-red-600 bg-white hover:bg-red-50">Reset (LocalStorage)</button>
-      </div>
+  <header class="w-full max-w-xl mb-4">
+    <h1 class="text-2xl font-bold text-center text-gray-800">Gestor de Deudas</h1>
+    <div class="flex justify-between mt-2">
+      <button id="toggleAddClient" class="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600">Agregar Cliente</button>
+      <button id="toggleConfig" class="bg-green-500 text-white px-4 py-2 rounded-md hover:bg-green-600">Configuración</button>
+    </div>
+    <div class="mt-2">
+      <label class="text-gray-700 font-semibold">Ver deudas en:</label>
+      <select id="globalCurrency" class="w-full mt-1 p-2 border rounded-md">
+        <option value="USD">USD</option>
+        <option value="CUP">CUP efectivo</option>
+        <option value="CUPT">CUP transferencia</option>
+      </select>
     </div>
   </header>
 
-  <main class="max-w-6xl mx-auto px-4 py-6">
-    <!-- Add Client panel (hidden by default) -->
-    <section id="panelAddClient" class="hidden mb-6 bg-white p-4 rounded shadow">
-      <h2 class="font-semibold mb-3">Registrar Cliente</h2>
-      <form id="formAddClient" class="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <input id="clientName" class="border rounded px-3 py-2" placeholder="Nombre del cliente" required>
+  <!-- Lista de clientes -->
+  <main id="clientsContainer" class="w-full max-w-xl flex flex-col gap-4"></main>
+
+  <!-- Modal Agregar Cliente -->
+  <div id="modalAddClient" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">
+    <div class="bg-white w-11/12 max-w-md p-4 rounded-md">
+      <h2 class="text-xl font-bold mb-2">Agregar Cliente</h2>
+      <input type="text" id="clientName" placeholder="Nombre del cliente" class="w-full p-2 border rounded mb-2">
+      <input type="number" id="clientDebt" placeholder="Deuda inicial" class="w-full p-2 border rounded mb-2">
+      <select id="clientCurrency" class="w-full p-2 border rounded mb-2">
+        <option value="USD">USD</option>
+        <option value="CUP">CUP efectivo</option>
+        <option value="CUPT">CUP transferencia</option>
+      </select>
+      <div class="flex justify-end gap-2 mt-2">
+        <button id="cancelAddClient" class="px-4 py-2 rounded-md bg-gray-300 hover:bg-gray-400">Cancelar</button>
+        <button id="saveClient" class="px-4 py-2 rounded-md bg-blue-500 text-white hover:bg-blue-600">Guardar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal Configuración de Tasas -->
+  <div id="modalConfig" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">
+    <div class="bg-white w-11/12 max-w-md p-4 rounded-md overflow-auto max-h-[90vh]">
+      <h2 class="text-xl font-bold mb-2">Configuración de Tasas Globales</h2>
+      <div class="flex flex-col gap-2">
         <div class="flex gap-2">
-          <input id="clientAmount" type="number" min="0" step="0.01" class="flex-1 border rounded px-3 py-2" placeholder="Deuda inicial (ej. 120.00)" required>
+          <select id="fromCurrency" class="flex-1 p-2 border rounded">
+            <option value="USD">USD</option>
+            <option value="CUP">CUP efectivo</option>
+            <option value="CUPT">CUP transferencia</option>
+          </select>
+          <select id="toCurrency" class="flex-1 p-2 border rounded">
+            <option value="USD">USD</option>
+            <option value="CUP">CUP efectivo</option>
+            <option value="CUPT">CUP transferencia</option>
+          </select>
         </div>
-        <select id="clientCurrency" class="border rounded px-3 py-2">
-          <option value="USD">USD</option>
-          <option value="CUP_EF">CUP (Efectivo)</option>
-          <option value="CUP_TR">CUP (Transferencia)</option>
-        </select>
-
-        <div class="md:col-span-3 flex gap-2 justify-end">
-          <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded">Guardar cliente</button>
-          <button id="cancelAddClient" type="button" class="px-4 py-2 border rounded">Cancelar</button>
-        </div>
-      </form>
-    </section>
-
-    <!-- Rates config panel (hidden by default) -->
-    <section id="panelRates" class="hidden mb-6 bg-white p-4 rounded shadow">
-      <h2 class="font-semibold mb-3">Configuración de tasas (Global)</h2>
-      <p class="mb-3 text-sm text-gray-600">Introduce al menos 2 tasas; la tercera se calculará automáticamente para mantener coherencia.</p>
-
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <div class="p-3 border rounded">
-          <label class="text-sm block mb-1">1 USD = ? CUP (Efectivo)</label>
-          <div class="flex gap-2 items-center">
-            <input id="rate_usd_ef" type="number" step="any" min="0" class="flex-1 border rounded px-2 py-1" placeholder="ej. 400">
-            <button class="btnFlip text-xs px-2 py-1 border rounded" data-target="rate_usd_ef">↔</button>
-          </div>
-          <p class="mt-2 text-xs text-gray-500">Campo: USD → CUP efectivo</p>
-        </div>
-
-        <div class="p-3 border rounded">
-          <label class="text-sm block mb-1">1 USD = ? CUP (Transferencia)</label>
-          <div class="flex gap-2 items-center">
-            <input id="rate_usd_tr" type="number" step="any" min="0" class="flex-1 border rounded px-2 py-1" placeholder="ej. 405">
-            <button class="btnFlip text-xs px-2 py-1 border rounded" data-target="rate_usd_tr">↔</button>
-          </div>
-          <p class="mt-2 text-xs text-gray-500">Campo: USD → CUP transferencia</p>
-        </div>
-
-        <div class="p-3 border rounded">
-          <label class="text-sm block mb-1">1 CUP (Efectivo) = ? CUP (Transferencia)</label>
-          <div class="flex gap-2 items-center">
-            <input id="rate_ef_tr" type="number" step="any" min="0" class="flex-1 border rounded px-2 py-1" placeholder="ej. 1.0125">
-            <button class="btnFlip text-xs px-2 py-1 border rounded" data-target="rate_ef_tr">↔</button>
-          </div>
-          <p class="mt-2 text-xs text-gray-500">Campo: CUP efectivo → CUP transferencia</p>
+        <input type="number" id="rateValue" placeholder="Valor de conversión" class="w-full p-2 border rounded">
+        <div class="flex justify-end gap-2 mt-2">
+          <button id="cancelRate" class="px-4 py-2 rounded-md bg-gray-300 hover:bg-gray-400">Cancelar</button>
+          <button id="saveRate" class="px-4 py-2 rounded-md bg-green-500 text-white hover:bg-green-600">Guardar</button>
         </div>
       </div>
+      <div id="ratesList" class="mt-4 text-gray-700"></div>
+    </div>
+  </div>
 
-      <div class="mt-4 flex justify-end gap-2">
-        <button id="saveRates" class="px-4 py-2 bg-green-600 text-white rounded">Guardar tasas</button>
-        <button id="resetRates" class="px-4 py-2 border rounded">Resetear</button>
-      </div>
-
-      <div id="ratesDisplay" class="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3"></div>
-    </section>
-
-    <!-- Clients list -->
-    <section id="clientsSection">
-      <h2 class="font-semibold mb-3">Clientes</h2>
-      <div id="clientsContainer" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
-      <p id="noClients" class="text-gray-500 mt-4">No hay clientes todavía. Usa "Añadir cliente" para empezar.</p>
-    </section>
-  </main>
-
-  <!-- Delete Confirmation Modal -->
-  <div id="modalOverlay" class="fixed inset-0 bg-black bg-opacity-40 hidden items-center justify-center z-50">
-    <div class="bg-white rounded p-6 w-full max-w-md">
-      <h3 class="font-semibold mb-3">¿Está seguro de que desea eliminar este cliente?</h3>
-      <p class="text-sm text-gray-600 mb-4">Esta acción eliminará al cliente y todo su historial.</p>
-      <div class="flex justify-end gap-2">
-        <button id="modalCancel" class="px-4 py-2 border rounded">Cancelar</button>
-        <button id="modalConfirm" class="px-4 py-2 bg-red-600 text-white rounded">Aceptar</button>
+  <!-- Modal Confirmación -->
+  <div id="modalConfirm" class="fixed inset-0 bg-black bg-opacity-50 hidden justify-center items-center z-50">
+    <div class="bg-white w-11/12 max-w-sm p-4 rounded-md text-center">
+      <p class="mb-4">¿Está seguro de que desea eliminar este cliente?</p>
+      <div class="flex justify-center gap-4">
+        <button id="cancelDelete" class="px-4 py-2 rounded-md bg-gray-300 hover:bg-gray-400">Cancelar</button>
+        <button id="confirmDelete" class="px-4 py-2 rounded-md bg-red-500 text-white hover:bg-red-600">Aceptar</button>
       </div>
     </div>
   </div>
