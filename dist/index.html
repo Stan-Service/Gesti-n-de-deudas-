@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Deudas</title>
+  <script type="module" crossorigin src="/assets/index.A9mAhoql.js"></script>
+  <link rel="stylesheet" crossorigin href="/assets/index.BUtXvUTh.css">
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm p-4 sticky top-0 z-40">
+        <div class="max-w-4xl mx-auto">
+            <h1 class="text-2xl font-bold text-gray-800 text-center mb-4">Gestor de Deudas</h1>
+            
+            <!-- Controles principales -->
+            <div class="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                <div class="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+                    <button id="addClientBtn" class="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors touch-friendly">
+                        + Agregar Cliente
+                    </button>
+                    <button id="configRatesBtn" class="bg-gray-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-gray-700 transition-colors touch-friendly">
+                        Configurar Tasas
+                    </button>
+                    <button id="showPaidClientsBtn" class="bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors touch-friendly hidden">
+                        Ver Pagados
+                    </button>
+                </div>
+                
+                <!-- Selector de moneda global -->
+                <div class="flex items-center gap-2 w-full sm:w-auto">
+                    <label class="text-sm font-medium text-gray-700">Moneda:</label>
+                    <select id="globalCurrency" class="border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="USD">USD</option>
+                        <option value="CUP_CASH">CUP Efectivo</option>
+                        <option value="CUP_TRANSFER">CUP Transferencia</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Contenido principal -->
+    <main class="max-w-4xl mx-auto p-4 pb-20">
+        <div id="clientsContainer" class="grid gap-4"></div>
+        <div id="paidClientsContainer" class="hidden">
+            <h2 class="text-lg font-bold text-green-700 mb-4 mt-8">Clientes con Deudas Pagadas</h2>
+            <div id="paidClientsList" class="grid gap-4"></div>
+        </div>
+        <div id="emptyState" class="text-center py-12 text-gray-500">
+            <p class="text-lg mb-2">No hay clientes agregados</p>
+            <p class="text-sm">Presiona "Agregar Cliente" para comenzar</p>
+        </div>
+    </main>
+
+    <!-- Modal Agregar Cliente -->
+    <div id="addClientModal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">Agregar Cliente</h2>
+                <button class="modal-close text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            
+            <form id="addClientForm" class="space-y-4">
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Nombre del Cliente</label>
+                    <input type="text" id="clientName" required class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="Nombre completo">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Deuda Inicial</label>
+                    <input type="number" id="initialDebt" required step="0.01" min="0" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="0.00">
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Moneda</label>
+                    <select id="clientCurrency" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                        <option value="USD">USD</option>
+                        <option value="CUP_CASH">CUP Efectivo</option>
+                        <option value="CUP_TRANSFER">CUP Transferencia</option>
+                    </select>
+                </div>
+                
+                <div class="flex gap-3 pt-4">
+                    <button type="button" class="modal-close flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-400 transition-colors">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-blue-600 text-white py-3 rounded-lg font-medium hover:bg-blue-700 transition-colors">Agregar</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal Configurar Tasas -->
+    <div id="configRatesModal" class="modal">
+        <div class="modal-content">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-xl font-bold">Configurar Tasas de Conversión</h2>
+                <button class="modal-close text-gray-500 hover:text-gray-700 text-2xl">&times;</button>
+            </div>
+            
+            <form id="configRatesForm" class="space-y-4">
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Desde</label>
+                        <select id="fromCurrency" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="USD">USD</option>
+                            <option value="CUP_CASH">CUP Efectivo</option>
+                            <option value="CUP_TRANSFER">CUP Transferencia</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">Hacia</label>
+                        <select id="toCurrency" class="w-full border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <option value="CUP_CASH">CUP Efectivo</option>
+                            <option value="CUP_TRANSFER">CUP Transferencia</option>
+                            <option value="USD">USD</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div>
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Tasa de Conversión</label>
+                    <div class="flex items-center gap-2">
+                        <span class="text-sm text-gray-600">1 <span id="fromLabel">USD</span> =</span>
+                        <input type="number" id="conversionRate" required step="0.0001" min="0.0001" class="flex-1 border border-gray-300 rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent" placeholder="1.0000">
+                        <span class="text-sm text-gray-600" id="toLabel">CUP Efectivo</span>
+                    </div>
+                </div>
+                
+                <div class="flex gap-3 pt-4">
+                    <button type="button" class="modal-close flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-400 transition-colors">Cancelar</button>
+                    <button type="submit" class="flex-1 bg-green-600 text-white py-3 rounded-lg font-medium hover:bg-green-700 transition-colors">Guardar</button>
+                </div>
+            </form>
+            
+            <!-- Tasas actuales -->
+            <div class="mt-6 pt-6 border-t">
+                <h3 class="font-medium text-gray-700 mb-3">Tasas Actuales</h3>
+                <div id="currentRates" class="text-sm text-gray-600 space-y-1"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmación Eliminar -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content max-w-sm">
+            <h3 class="text-lg font-bold mb-4">Confirmar Eliminación</h3>
+            <p class="text-gray-600 mb-6">¿Estás seguro de que quieres eliminar este cliente? Esta acción no se puede deshacer.</p>
+            <div class="flex gap-3">
+                <button id="cancelDelete" class="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-400 transition-colors">Cancelar</button>
+                <button id="confirmDelete" class="flex-1 bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-colors">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Confirmación Eliminar Operación -->
+    <div id="deleteOperationModal" class="modal">
+        <div class="modal-content max-w-sm">
+            <h3 class="text-lg font-bold mb-4">Eliminar Operación</h3>
+            <p class="text-gray-600 mb-6">¿Estás seguro de que quieres eliminar esta operación del historial?</p>
+            <div class="flex gap-3">
+                <button id="cancelDeleteOperation" class="flex-1 bg-gray-300 text-gray-700 py-3 rounded-lg font-medium hover:bg-gray-400 transition-colors">Cancelar</button>
+                <button id="confirmDeleteOperation" class="flex-1 bg-red-600 text-white py-3 rounded-lg font-medium hover:bg-red-700 transition-colors">Eliminar</button>
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>
