@@ -1,0 +1,17 @@
+{
+  "name": "gestion-de-deudas",
+  "version": "1.0.0",
+  "description": "Gestor de deudas con Tailwind CSS",
+  "scripts": {
+    "dev": "vite",
+    "build:css": "tailwindcss -i ./src/input.css -o ./style.css --minify",
+    "build": "npm run build:css && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "autoprefixer": "^10.4.0",
+    "postcss": "^8.4.0",
+    "tailwindcss": "^3.4.0",
+    "vite": "^7.1.3"
+  }
+}
